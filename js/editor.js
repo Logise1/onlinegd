@@ -71,6 +71,8 @@ const Editor = {
         } else {
             // New level — assign an ID right away
             this.currentLevelId = 'custom_' + Date.now();
+            const newName = params.get('name');
+            if (newName) this.levelName = newName;
         }
 
         // Auto-save every 5 seconds
@@ -208,7 +210,8 @@ const Editor = {
                     const type = getObjectType(o.type);
                     const ow = (type.w || 1) * (o.scale || 1);
                     const oh = (type.h || 1) * (o.scale || 1);
-                    return o.x < xMax && o.x + ow > xMin && o.y < yMax && o.y + oh > yMin;
+                    const oy = o.y + 1 - oh;
+                    return o.x < xMax && o.x + ow > xMin && oy < yMax && oy + oh > yMin;
                 });
                 this.selectedObject = this.selectedObjects[0] || null;
                 this.isSelecting = false;
@@ -326,8 +329,11 @@ const Editor = {
     getObjectAt(cx, cy) {
         return this.objects.find(o => {
             const type = getObjectType(o.type);
-            return cx >= o.x && cx < o.x + (o.w || 1) * (o.scale || 1) &&
-                cy >= o.y && cy < o.y + (o.h || 1) * (o.scale || 1);
+            const w = (type.w || 1) * (o.scale || 1);
+            const h = (type.h || 1) * (o.scale || 1);
+            const yOffset = 1 - h;
+            return cx >= o.x && cx < o.x + w &&
+                cy >= o.y + yOffset && cy < o.y + yOffset + h;
         });
     },
 
@@ -613,7 +619,8 @@ const Editor = {
         return {
             id: this.currentLevelId,
             name: this.levelName || 'Untitled',
-            difficulty: 'Custom',
+            difficulty: this.levelDifficulty || 'normal',
+            stars: this.levelStars || 0,
             speed: this.levelSpeed,
             song: this.levelSong,
             bgColor: this.levelBgColor,
@@ -645,6 +652,8 @@ const Editor = {
         this.currentLevelId = level.id;
         this.objects = JSON.parse(JSON.stringify(level.objects || []));
         this.levelName = level.name || 'Untitled';
+        this.levelDifficulty = level.difficulty || 'normal';
+        this.levelStars = level.stars || 0;
         this.levelSpeed = level.speed || 'normal';
         this.levelSong = level.song || 'StereoMadness.mp3';
         this.levelBgColor = level.bgColor || '#0033aa';
@@ -789,9 +798,10 @@ const Editor = {
             if (!type) continue;
 
             const ox = obj.x * gs;
-            const oy = obj.y * gs;
+            let oy = obj.y * gs;
             const ow = (type.w || 1) * gs * (obj.scale || 1);
             const oh = (type.h || 1) * gs * (obj.scale || 1);
+            oy += gs - oh; // Align to bottom of the grid cell
 
             const sprite = SpriteCache.get(type.sprite);
 
@@ -905,12 +915,16 @@ const Editor = {
         if (!modal) return;
 
         const nameInput = document.getElementById('setting-name');
+        const diffInput = document.getElementById('setting-difficulty');
+        const starsInput = document.getElementById('setting-stars');
         const speedInput = document.getElementById('setting-speed');
         const songInput = document.getElementById('setting-song');
         const bgInput = document.getElementById('setting-bg');
         const gndInput = document.getElementById('setting-ground');
 
         if (nameInput) nameInput.value = this.levelName;
+        if (diffInput) diffInput.value = (this.levelDifficulty || 'normal').toLowerCase();
+        if (starsInput) starsInput.value = this.levelStars || 0;
         if (speedInput) speedInput.value = this.levelSpeed;
         if (songInput) songInput.value = this.levelSong || 'StereoMadness.mp3';
         if (bgInput) bgInput.value = this.levelBgColor;
@@ -924,12 +938,16 @@ const Editor = {
         if (!modal) return;
 
         const nameInput = document.getElementById('setting-name');
+        const diffInput = document.getElementById('setting-difficulty');
+        const starsInput = document.getElementById('setting-stars');
         const speedInput = document.getElementById('setting-speed');
         const songInput = document.getElementById('setting-song');
         const bgInput = document.getElementById('setting-bg');
         const gndInput = document.getElementById('setting-ground');
 
         if (nameInput) this.levelName = nameInput.value || 'My Level';
+        if (diffInput) this.levelDifficulty = diffInput.value;
+        if (starsInput) this.levelStars = parseInt(starsInput.value) || 0;
         if (speedInput) this.levelSpeed = speedInput.value;
         if (songInput) this.levelSong = songInput.value;
         if (bgInput) this.levelBgColor = bgInput.value;

@@ -63,3 +63,5 @@ AudioManager.load('startLevel', 'sounds/playSound_01.ogg');
 AudioManager.load('death', 'sounds/explode_11.ogg');
 AudioManager.load('quit', 'sounds/quitSound_01.ogg');
 AudioManager.load('menu', 'sounds/menuLoop.mp3');
+AudioManager.load('portal', 'sounds/portal_01.ogg');
+AudioManager.load('orb', 'sounds/orb_01.ogg');

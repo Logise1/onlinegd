@@ -115,6 +115,7 @@ const Engine = {
         this.camera = { x: 0, y: 0, shake: 0 };
         this.activeAnimations = [];
         this.groupModifications = {};
+        this.lastPortalY = undefined;
 
         // Reset triggered flags on ALL objects
         if (levelData.objects) {
@@ -122,7 +123,25 @@ const Engine = {
         }
 
         // Create player
-        this.player = Player.create(BLOCK_SIZE * 3, this.groundY - BLOCK_SIZE);
+        let startX = BLOCK_SIZE * 3;
+        let startY = this.groundY - BLOCK_SIZE;
+
+        // Check for StartPos object
+        if (levelData.objects) {
+            const startPosObj = levelData.objects.find(o => o.type === 'start_pos');
+            if (startPosObj) {
+                startX = startPosObj.x * BLOCK_SIZE;
+                startY = (startPosObj.y !== undefined
+                    ? this.groundY - (this.GROUND_ROW - startPosObj.y) * BLOCK_SIZE
+                    : this.groundY - BLOCK_SIZE);
+                // Adjust for bottom alignment
+                const type = getObjectType('start_pos');
+                const oh = (type.h || 1) * BLOCK_SIZE * (startPosObj.scale || 1);
+                startY += BLOCK_SIZE - oh;
+            }
+        }
+
+        this.player = Player.create(startX, startY);
 
         // Calculate level length for progress
         this.levelLength = 0;
@@ -139,12 +158,35 @@ const Engine = {
         if (typeof UI !== 'undefined') UI.hideAll();
 
         // Music
+        this.loadingMusic = true;
         const songToPlay = levelData.song || 'StereoMadness.mp3';
         if (typeof AudioManager !== 'undefined') {
             AudioManager.loadMusic('level_music', `music/${songToPlay}`);
-            setTimeout(() => {
-                if (this.state === 'playing') AudioManager.playMusic('level_music');
-            }, 500); // small delay to ensure loading
+            const bgAudio = AudioManager.sounds['level_music'];
+            if (bgAudio) {
+                if (bgAudio.readyState >= 3) {
+                    this.loadingMusic = false;
+                } else {
+                    const onReady = () => {
+                        bgAudio.removeEventListener('canplay', onReady);
+                        this.loadingMusic = false;
+                        if (this.state === 'playing') AudioManager.playMusic('level_music');
+                    };
+                    bgAudio.addEventListener('canplay', onReady);
+                    // timeout fallback
+                    setTimeout(() => {
+                        if (this.loadingMusic) {
+                            bgAudio.removeEventListener('canplay', onReady);
+                            this.loadingMusic = false;
+                            if (this.state === 'playing') AudioManager.playMusic('level_music');
+                        }
+                    }, 2000);
+                }
+            } else {
+                this.loadingMusic = false;
+            }
+        } else {
+            this.loadingMusic = false;
         }
     },
 
@@ -186,6 +228,11 @@ const Engine = {
 
     /* ── Main Loop ── */
     start() {
+        if (!this.loadingMusic && typeof AudioManager !== 'undefined') {
+            AudioManager.playMusic('level_music');
+        } else if (this.loadingMusic && this.state === 'playing') {
+            // it will play once the event listener resolves in `loadLevel`
+        }
         this.lastTime = performance.now();
         this.loop(this.lastTime);
     },
@@ -233,18 +280,30 @@ const Engine = {
             let targetCamY = p.y - this.logicalHeight * 0.5;
 
             // If not free fly, lock camera to a fixed offset relative to ground
-            if (!this.freeFly) {
-                targetCamY = targetCamYCube;
+            if (!p.freeFly) {
+                targetCamY = (this.lastPortalY !== undefined) ? (this.lastPortalY - this.logicalHeight * 0.5) : targetCamYCube;
             } else {
-                // Clamp targetCamY to sensible limits in freefly
-                const limit = BLOCK_SIZE * 2;
-                if (targetCamY > limit) targetCamY = limit;
+                // Clamp targetCamY so the camera doesn't show far below the ground
+                const groundLimit = this.groundY - this.logicalHeight * 0.8;
+                if (targetCamY > groundLimit) targetCamY = groundLimit;
             }
 
             this.camera.y += (targetCamY - this.camera.y) * 0.1;
         } else {
-            // Cube/Ball/Robot/Spider snap to ground-relative height
-            this.camera.y += (targetCamYCube - this.camera.y) * 0.1;
+            // Cube/Ball/Robot/Spider:
+            // Smoother Y follow: Center on player but pull towards ground
+            let targetCamY = p.y - this.logicalHeight * 0.6;
+
+            // Pull towards ground-relative height (targetCamYCube) when closer to it
+            const groundInfluence = 0.5;
+            targetCamY = (targetCamY * (1 - groundInfluence)) + (targetCamYCube * groundInfluence);
+
+            // Clamp so we don't see below ground level
+            const groundLimit = this.groundY - this.logicalHeight * 0.8;
+            if (targetCamY > groundLimit) targetCamY = groundLimit;
+
+            // Smoother interpolation (0.06 instead of 0.1)
+            this.camera.y += (targetCamY - this.camera.y) * 0.06;
         }
 
         // Camera shake decay
@@ -406,13 +465,22 @@ const Engine = {
             const type = getObjectType(obj.type);
             if (!type) continue;
 
-            const ox = obj.x * BLOCK_SIZE;
-            const oy = (obj.y !== undefined
+            let ox = obj.x * BLOCK_SIZE;
+            let oy = (obj.y !== undefined
                 ? this.groundY - (this.GROUND_ROW - obj.y) * BLOCK_SIZE
                 : this.groundY - BLOCK_SIZE);
+
+            // Apply Group Modifications (for moving blocks hitbox)
+            if (obj.groupID && this.groupModifications[obj.groupID]) {
+                const mod = this.groupModifications[obj.groupID];
+                ox += mod.x || 0;
+                oy += mod.y || 0;
+            }
+
             const scale = obj.scale || 1;
             const ow = (type.w || 1) * BLOCK_SIZE * scale;
             const oh = (type.h || 1) * BLOCK_SIZE * scale;
+            oy += BLOCK_SIZE - oh;
 
             // AABB overlap check — default hitbox covers full object bounds
             let hb = type.hitbox || { x: 0, y: 0, w: type.w || 1, h: type.h || 1 };
@@ -460,8 +528,11 @@ const Engine = {
 
                 if (type.portalMode) {
                     Engine.changeMode(type.portalMode);
-                    // Update freeFly from portal object property
-                    Engine.freeFly = !!obj.freeFly;
+                    // Update freeFly from portal object property on the player
+                    p.freeFly = !!obj.freeFly;
+                    if (!p.freeFly) {
+                        Engine.lastPortalY = oy;
+                    }
                 }
                 if (type.portalGravity) Engine.flipGravity();
                 if (type.portalSpeed) Engine.changeSpeed(type.portalSpeed);
@@ -485,12 +556,17 @@ const Engine = {
                 obj._triggered = true;
                 if (type.negateVelocity) {
                     p.vy = -p.vy;
+                } else if (type.toggleGravity) {
+                    // Green orb logic: flip gravity AND apply a jump force to compensate
+                    p.gravityDir *= -1;
+                    p.vy = type.orbForce * p.gravityDir;
                 } else {
                     p.vy = type.orbForce * p.gravityDir;
                 }
+
                 if (type.flipGravity) p.gravityDir *= -1;
-                if (type.toggleGravity) p.gravityDir *= -1;
                 p.onGround = false;
+                AudioManager.play('orb');
                 // Glow particle
                 this.spawnParticles(px + pSize / 2, py + pSize / 2, type.orbGlow || '#fff', 8);
                 continue;
@@ -543,14 +619,28 @@ const Engine = {
         } else if (minOverlap === overlapBottom && p.gravityDir === 1) {
             // Hit ceiling
             p.y = oy + oh;
-            p.vy = 0;
+            p.vy = Math.max(0, p.vy); // Stop upward movement
         } else if (minOverlap === overlapTop && p.gravityDir === -1) {
             // Hit floor (upside-down)
             p.y = oy - pSize;
-            p.vy = 0;
+            p.vy = Math.min(0, p.vy); // Stop downward movement (which is upward for inverted)
         } else if (minOverlap === overlapLeft || minOverlap === overlapRight) {
-            // Side collision = death (wall)
-            this.die();
+            // Side collision (Wall)
+            // Forgiveness: if top of player is very close to top of block, slide up instead of dying
+            const verticalForgiveness = 12;
+            if (p.gravityDir === 1 && overlapTop < verticalForgiveness) {
+                p.y = oy - pSize;
+                p.vy = 0;
+                p.onGround = true;
+                p.canJump = true;
+            } else if (p.gravityDir === -1 && overlapBottom < verticalForgiveness) {
+                p.y = oy + oh;
+                p.vy = 0;
+                p.onGround = true;
+                p.canJump = true;
+            } else {
+                this.die();
+            }
         }
     },
 
@@ -567,13 +657,13 @@ const Engine = {
                 p.onGround = true;
                 p.canJump = true;
             }
-            if (p.y <= this.ceilingY) {
+            if (p.y <= this.ceilingY && !p.freeFly) {
                 p.y = this.ceilingY;
                 p.vy = 0;
             }
         } else {
             // Reversed gravity
-            if (p.y <= this.ceilingY) {
+            if (p.y <= this.ceilingY && !p.freeFly) {
                 p.y = this.ceilingY;
                 p.vy = 0;
                 p.onGround = true;
@@ -585,8 +675,17 @@ const Engine = {
             }
         }
 
-        // Fell off screen (logical coords)
-        if (p.y > this.groundY + BLOCK_SIZE * 5 || p.y < -BLOCK_SIZE * 15) {
+        // Fell off screen
+        const hitCeilingOffscreen = p.y < -BLOCK_SIZE * 20;
+        const hitBottomOffscreen = p.y > this.groundY + BLOCK_SIZE * 5;
+
+        // Wave mode dies if hitting ground/ceiling
+        if (p.mode === 'wave' && (p.onGround || p.y <= this.ceilingY)) {
+            this.die();
+            return;
+        }
+
+        if (hitBottomOffscreen || (hitCeilingOffscreen && !p.freeFly)) {
             this.die();
         }
     },
@@ -706,9 +805,11 @@ const Engine = {
                 attempts: this.attempts,
                 jumps: this.jumps,
                 time: elapsed,
-                newBest: isNewBest
+                newBest: isNewBest,
+                level: this.currentCloudLevel || this.level,
+                starsAwarded: this.starsAwarded
             });
-        }, 300);
+        }, 1000); // give it a bit more time for the cloud event to finish
     },
 
     /* ── Particles ── */
@@ -866,11 +967,13 @@ const Engine = {
             const ox = obj.x * BLOCK_SIZE;
             if (ox < viewLeft || ox > viewRight) continue;
 
-            const oy = (obj.y !== undefined
+            let oy = (obj.y !== undefined
                 ? this.groundY - (this.GROUND_ROW - obj.y) * BLOCK_SIZE
                 : this.groundY - BLOCK_SIZE);
-            const ow = (type.w || 1) * BLOCK_SIZE;
-            const oh = (type.h || 1) * BLOCK_SIZE;
+            const scale = obj.scale || 1;
+            const ow = (type.w || 1) * BLOCK_SIZE * scale;
+            const oh = (type.h || 1) * BLOCK_SIZE * scale;
+            oy += BLOCK_SIZE - oh;
 
             // Apply Group Modifications
             let tx = 0;
@@ -907,8 +1010,19 @@ const Engine = {
                 ctx.translate(-cx, -cy);
             }
 
+            let drawX = ox;
+            let drawY = oy;
+            let drawW = ow;
+            let drawH = oh;
+
             if (sprite) {
-                ctx.drawImage(sprite, ox, oy, ow, oh);
+                // Fix portal squashing
+                if (type.category === 'portal' && sprite.width && sprite.height) {
+                    const ratio = sprite.width / sprite.height;
+                    drawW = drawH * ratio;
+                    drawX = ox + (ow - drawW) / 2;
+                }
+                ctx.drawImage(sprite, drawX, drawY, drawW, drawH);
             } else {
                 // Fallback colored rect
                 ctx.fillStyle = this.getFallbackColor(type);

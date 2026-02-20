@@ -20,6 +20,7 @@ const LevelManager = {
     saveCustomLevel(level) {
         this.loadCustomLevels();
         if (!level.name || level.name.trim() === '') level.name = 'Untitled';
+        level.lastEdited = Date.now();
         const idx = this.customLevels.findIndex(l => l.id === level.id);
         if (idx >= 0) this.customLevels[idx] = level;
         else this.customLevels.push(level);

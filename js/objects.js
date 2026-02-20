@@ -24,7 +24,8 @@ const ObjectTypes = {
     PORTAL_SPIDER: { id: 'portal_spider', category: 'portal', sprite: 'sprites/portals/portal_spider.png', solid: false, lethal: false, w: 1, h: 3, portalMode: 'spider' },
 
     // ── Portals (gravity) ──
-    PORTAL_GRAVITY: { id: 'portal_gravity', category: 'portal', sprite: 'sprites/portals/portal_gravity.png', solid: false, lethal: false, w: 1, h: 3, portalGravity: 'flip' },
+    PORTAL_GRAVITY_FLIP: { id: 'portal_gravity_flip', category: 'portal', sprite: 'sprites/portals/portal_gravity.png', solid: false, lethal: false, w: 1, h: 3, portalGravity: 'flip' },
+    PORTAL_GRAVITY_NORMAL: { id: 'portal_gravity_normal', category: 'portal', sprite: 'sprites/portals/portal_gravity_normal.png', solid: false, lethal: false, w: 1, h: 3, portalGravity: 'normal' },
 
     // ── Portals (speed) ──
     PORTAL_SPEED_SLOW: { id: 'portal_speed_slow', category: 'portal', sprite: 'sprites/portals/portal_speed_slow.png', solid: false, lethal: false, w: 1, h: 2, portalSpeed: 'slow' },
@@ -50,6 +51,7 @@ const ObjectTypes = {
     ORB_BLUE: { id: 'orb_blue', category: 'interactive', sprite: 'sprites/interactive/orb_blue.png', solid: false, lethal: false, w: 1, h: 1, orbForce: -8, flipGravity: true, orbGlow: '#3388ff' },
     ORB_GREEN: { id: 'orb_green', category: 'interactive', sprite: 'sprites/interactive/orb_green.png', solid: false, lethal: false, w: 1, h: 1, orbForce: -12, orbGlow: '#33ff88', toggleGravity: true },
     ORB_BLACK: { id: 'orb_black', category: 'interactive', sprite: 'sprites/interactive/orb_black.png', solid: false, lethal: false, w: 1, h: 1, orbForce: 0, orbGlow: '#333333', negateVelocity: true },
+    START_POS: { id: 'start_pos', category: 'interactive', sprite: 'sprites/interactive/startpos.png', solid: false, lethal: false, w: 1, h: 1 },
 
     // ── Decoration ──
     GLOW_BLOCK: { id: 'glow_block', category: 'deco', sprite: 'sprites/blocks/glow_block.png', solid: false, lethal: false, w: 1, h: 1 },

@@ -150,6 +150,9 @@ const UI = {
            onerror="this.outerHTML='<h2 style=\\'color:#00ff88\\'>LEVEL COMPLETE!</h2>'" />
       ${stats.newBest ? `<img class="newbest-img" src="sprites/ui/newbest.png" alt="New Best"
            onerror="this.outerHTML='<p style=\\'color:#ffcc00; font-size:20px\\'>★ NEW BEST ★</p>'" />` : ''}
+      ${stats.starsAwarded ? `<div style="margin: 15px 0; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 20px; border: 2px solid #ffd700; display: inline-block;">
+          <span style="color:#ffd700; font-weight:bold; font-size:24px; text-shadow:0 0 10px rgba(255,215,0,0.5);">★ +${stats.starsAwarded} STARS EARNED!</span>
+      </div>` : ''}
       <div style="margin: 12px 0;">
         <p class="overlay-stat">Attempts: ${stats.attempts}</p>
         <p class="overlay-stat">Jumps: ${stats.jumps}</p>

@@ -104,6 +104,22 @@
                 <option value="PowerTrip.mp3">Power Trip</option>
                 <option value="TheChallenge.mp3">The Challenge</option>
             </select>
+            <label for="setting-difficulty">Difficulty</label>
+            <select id="setting-difficulty">
+                <option value="auto">Auto</option>
+                <option value="easy">Easy</option>
+                <option value="normal" selected>Normal</option>
+                <option value="hard">Hard</option>
+                <option value="harder">Harder</option>
+                <option value="insane">Insane</option>
+                <option value="demon-easy">Demon (Easy)</option>
+                <option value="demon-medium">Demon (Medium)</option>
+                <option value="demon-hard">Demon (Hard)</option>
+                <option value="demon-insane">Demon (Insane)</option>
+                <option value="demon-extreme">Demon (Extreme)</option>
+            </select>
+            <label for="setting-stars">Stars (Reward)</label>
+            <input type="number" id="setting-stars" value="0" min="0" max="10" />
             <label for="setting-bg">Background Color</label>
             <input type="color" id="setting-bg" value="#0033aa" />
             <label for="setting-ground">Ground Color</label>
@@ -144,6 +160,31 @@
             Editor.init(editorCanvas);
             Editor.resize();
             Editor.render();
+
+            // Auto-fill stars based on difficulty
+            const diffSelect = document.getElementById('setting-difficulty');
+            const starsInput = document.getElementById('setting-stars');
+            if (diffSelect && starsInput) {
+                diffSelect.addEventListener('change', (e) => {
+                    const diffMap = {
+                        'auto': 1,
+                        'easy': 2,
+                        'normal': 3,
+                        'hard': 4,
+                        'harder': 6,
+                        'insane': 8,
+                        'demon-easy': 10,
+                        'demon-medium': 10,
+                        'demon-hard': 10,
+                        'demon-insane': 10,
+                        'demon-extreme': 10
+                    };
+                    const choice = e.target.value;
+                    if (diffMap[choice] !== undefined) {
+                        starsInput.value = diffMap[choice];
+                    }
+                });
+            }
         }, 100);
 
         // ESC = save & go back

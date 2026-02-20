@@ -157,14 +157,17 @@ const Player = {
         p.vy += grav;
         p.y += p.vy;
 
-        // Rotation
+        // Rotation logic
         if (!p.onGround) {
-            p.targetRotation += 5 * p.gravityDir;
+            p.targetRotation += 6.5 * p.gravityDir; // Slightly faster for cleaner visual
         } else {
             // Snap rotation to nearest 90°
             p.targetRotation = Math.round(p.targetRotation / 90) * 90;
         }
-        p.rotation += (p.targetRotation - p.rotation) * 0.3;
+
+        // Smoothly interpolate current rotation to target
+        let diff = (p.targetRotation - p.rotation);
+        p.rotation += diff * 0.35;
 
         p.onGround = false;
     },
@@ -287,13 +290,13 @@ const Player = {
             // Gravity flip
             if (p.gravityDir === -1) ctx.scale(1, -1);
 
-            if (['ship', 'ufo', 'wave'].includes(p.mode)) {
-                const sw = pSize * 1.6;
-                const sh = pSize;
-                ctx.drawImage(sprite, -sw / 2, -sh / 2, sw, sh);
-            } else {
-                ctx.drawImage(sprite, -pSize / 2, -pSize / 2, pSize, pSize);
-            }
+            const ratio = (sprite.width && sprite.height) ? (sprite.width / sprite.height) : 1;
+            let sw = pSize * ratio;
+            let sh = pSize;
+
+            // For ship and wave, sometimes they might need slight scale adjust if they feel too small height-wise, 
+            // but preserving ratio ensures no squashing.
+            ctx.drawImage(sprite, -sw / 2, -sh / 2, sw, sh);
             ctx.restore();
         } else {
             // Trigger load if not already loading

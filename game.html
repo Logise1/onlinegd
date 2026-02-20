@@ -87,8 +87,7 @@
                 if (currentCloudLevel && currentCloudLevel.featured && Auth.user) {
                     const stars = currentCloudLevel.starsReward || 5;
                     await Cloud.awardStars(Auth.user.uid, stars);
-                    alert(`★ AWESOME! You gained ${stars} stars for completing a Featured Level!`);
-                    // Update local stars count too if needed
+                    Engine.starsAwarded = stars;
                 }
             });
 

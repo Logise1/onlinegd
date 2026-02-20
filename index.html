@@ -119,12 +119,36 @@
     <div id="level-details-screen">
         <img class="back-btn" id="btn-back-details" src="sprites/ui/back.png" alt="Back" />
         <div class="level-details-container">
-            <div class="level-details-info">
-                <h1 class="level-details-name" id="details-name">LEVEL NAME</h1>
-                <div class="level-details-author" id="details-author">By Creator</div>
+            <div class="level-details-info"
+                style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                <h1 class="level-details-name" id="details-name" style="margin:0;">LEVEL NAME</h1>
+                <div class="level-details-author" id="details-author" style="margin:0;">By Creator</div>
+                <div style="display:flex; gap:15px; align-items:center;">
+                    <img id="details-diff-img" src=""
+                        style="width: 40px; height: 40px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">
+                    <span id="details-diff" style="font-weight:bold; font-size:20px; color:#fff;">NORMAL</span>
+                    <span id="details-stars"
+                        style="color:#ffd700; font-weight:bold; font-size:20px; text-shadow:0 0 10px rgba(255,215,0,0.5);">★
+                        0</span>
+                </div>
             </div>
 
-            <img src="sprites/ui/playbtn.png" class="big-play-btn" id="btn-details-play">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0;">
+                <div id="local-actions-left" style="display: none; flex-direction: column; gap: 10px;">
+                    <button class="toolbar-btn" id="btn-details-edit"
+                        style="background:rgba(255,255,255,0.1); width: 80px;">✏ EDIT</button>
+                    <button class="toolbar-btn" id="btn-details-delete" style="background:#ff4444; width: 80px;">🗑
+                        DEL</button>
+                </div>
+
+                <img src="sprites/ui/playbtn.png" class="big-play-btn" id="btn-details-play" style="margin: 0;">
+
+                <div id="local-actions-right" style="display: none; flex-direction: column; gap: 10px;">
+                    <button class="toolbar-btn" id="btn-details-upload" style="background:#7850ff; width: 80px;">☁
+                        UPLOAD</button>
+                    <button class="toolbar-btn" style="visibility: hidden; width: 80px;">.</button>
+                </div>
+            </div>
 
             <div class="details-progress-section">
                 <div class="details-progress-item">
@@ -149,7 +173,7 @@
                 </div>
             </div>
 
-            <div class="details-difficulty" id="details-diff">NORMAL</div>
+            <!-- Old difficulty text removed, it's now near the title -->
         </div>
     </div>
 
@@ -248,7 +272,10 @@
             const prev = document.getElementById('level-details-screen').dataset.from;
             showScreen(prev || 'menu-screen');
         };
-        document.getElementById('btn-create-level').onclick = () => window.location.href = 'editor.html';
+        document.getElementById('btn-create-level').onclick = () => {
+            const name = prompt('Enter your level name', 'Untitled');
+            if (name !== null) window.location.href = `editor.html?name=${encodeURIComponent(name)}`;
+        };
         document.getElementById('btn-iconkit').onclick = () => window.location.href = 'iconkit.html';
 
         // Play menu music on first interaction
@@ -287,9 +314,24 @@
                     adminExtras = `<button class="toolbar-btn admin-btn" style="background:#ffd700; color:#000; font-size:11px;">${lvl.featured ? 'UNFEATURE' : 'FEATURE'}</button>`;
                 }
 
+                const diffStr = (lvl.difficulty || 'Normal').toLowerCase();
+                let diffImgName = 'normal';
+                if (['auto', 'easy', 'normal', 'hard', 'harder', 'insane', 'demon-easy', 'demon-medium', 'demon-hard', 'demon-insane', 'demon-extreme'].includes(diffStr)) {
+                    diffImgName = diffStr;
+                } else if (diffStr.includes('demon')) {
+                    diffImgName = 'demon-hard';
+                }
+
+                const starsHtml = lvl.starsReward || lvl.stars ? `<span style="color:#ffd700; font-weight:bold; text-shadow:0 0 5px rgba(255,215,0,0.5);">★ ${lvl.starsReward || lvl.stars}</span>` : '';
+
                 item.innerHTML = `
-                    <div class="editor-level-info">
-                        <div class="editor-level-name">${lvl.name} ${lvl.featured ? '<span class="featured-badge">★ Featured</span>' : ''}</div>
+                    <div style="display:flex; align-items:center; justify-content:center; width: 40px;">
+                        <img src="https://gdbrowser.com/assets/difficulties/${diffImgName}.png" style="width:30px; height:30px;">
+                    </div>
+                    <div class="editor-level-info" style="margin-left: 10px;">
+                        <div class="editor-level-name" style="display:flex; gap:10px; align-items:center;">
+                            ${lvl.name} ${starsHtml} ${lvl.featured ? '<span class="featured-badge">★ Featured</span>' : ''}
+                        </div>
                         <div class="editor-level-meta">Created by ${lvl.creatorName}</div>
                     </div>
                     <div style="display:flex; gap:10px; align-items:center;">
@@ -358,35 +400,41 @@
             const list = document.getElementById('editor-level-list');
             list.innerHTML = '';
             LevelManager.loadCustomLevels();
-            LevelManager.customLevels.forEach(lvl => {
+
+            // Sort custom levels by lastEdited descending
+            const sortedLevels = [...LevelManager.customLevels].sort((a, b) => {
+                const ta = a.lastEdited || 0;
+                const tb = b.lastEdited || 0;
+                return tb - ta;
+            });
+
+
+            sortedLevels.forEach(lvl => {
+                const diffStr = (lvl.difficulty || 'Normal').toLowerCase();
+                let diffImgName = 'normal';
+                if (['auto', 'easy', 'normal', 'hard', 'harder', 'insane', 'demon-easy', 'demon-medium', 'demon-hard', 'demon-insane', 'demon-extreme'].includes(diffStr)) {
+                    diffImgName = diffStr;
+                } else if (diffStr.includes('demon')) {
+                    diffImgName = 'demon-hard';
+                }
+
                 const item = document.createElement('div');
                 item.className = 'editor-level-item';
                 item.innerHTML = `
-                    <div class="editor-level-info"><div class="editor-level-name">${lvl.name || 'Untitled'}</div></div>
+                    <div style="display:flex; align-items:center; justify-content:center; width: 40px;">
+                        <img src="https://gdbrowser.com/assets/difficulties/${diffImgName}.png" style="width:30px; height:30px;">
+                    </div>
+                    <div class="editor-level-info" style="margin-left: 10px;">
+                        <div class="editor-level-name">${lvl.name || 'Untitled'}</div>
+                        <div class="editor-level-meta" style="font-size: 11px; color: rgba(255,255,255,0.4)">
+                            Last edited: ${lvl.lastEdited ? new Date(lvl.lastEdited).toLocaleString() : 'Never'}
+                        </div>
+                    </div>
                     <div class="editor-level-actions">
-                        <button class="toolbar-btn view-local" style="background:#00ff88; color:#000;">VIEW</button>
-                        <button class="toolbar-btn" style="background:rgba(255,255,255,0.1);" onclick="window.location.href='editor.html?edit=${lvl.id}'">✏ EDIT</button>
-                        <button id="btn-share-${lvl.id}" class="toolbar-btn" style="background:#7850ff;">☁ CLOUD</button>
+                        <button class="toolbar-btn view-local" style="background:#00ff88; color:#000; min-width:100px;">VIEW</button>
                     </div>
                 `;
-                item.querySelector('.view-local').onclick = () => showLevelDetails(lvl, 'editor-list');
-                item.querySelector(`#btn-share-${lvl.id}`).onclick = async (e) => {
-                    if (!Auth.user) return alert('Please Login to share levels!');
-                    const btn = e.target;
-                    const originalText = btn.innerText;
-                    btn.innerText = 'WAIT...';
-                    btn.disabled = true;
-                    const res = await Cloud.uploadLevel(lvl, Auth.user.uid, Auth.userData.username);
-                    if (res.success) {
-                        btn.innerText = 'SHARED!';
-                        btn.style.background = '#00ff88';
-                        btn.style.color = '#000';
-                    } else {
-                        alert('Upload failed: ' + res.error);
-                        btn.innerText = originalText;
-                        btn.disabled = false;
-                    }
-                };
+                item.querySelector('.view-local').onclick = () => showLevelDetails(lvl, 'editor-list', true);
                 list.appendChild(item);
             });
         }
@@ -399,13 +447,73 @@
             container.innerHTML = `<img src="https://gdbrowser.com/iconkit/premade/${type}_${id}.png" style="width:100px; filter:drop-shadow(0 0 20px #00ff88);">`;
         }
 
-        function showLevelDetails(lvl, fromScreen) {
+        function showLevelDetails(lvl, fromScreen, isLocal = false) {
             const screen = document.getElementById('level-details-screen');
             screen.dataset.from = fromScreen;
 
             document.getElementById('details-name').innerText = lvl.name || 'UNTITLED';
             document.getElementById('details-author').innerText = `BY ${lvl.creatorName || (lvl.id < 100 ? 'ROBTOP' : 'YOU')}`;
-            document.getElementById('details-diff').innerText = (lvl.difficulty || 'Normal').toUpperCase();
+
+            const diffStr = (lvl.difficulty || 'Normal').toLowerCase();
+            document.getElementById('details-diff').innerText = diffStr.toUpperCase();
+
+            // Try to map to available difficulty names
+            let diffImgName = 'normal';
+            if (['auto', 'easy', 'normal', 'hard', 'harder', 'insane', 'demon-easy', 'demon-medium', 'demon-hard', 'demon-insane', 'demon-extreme'].includes(diffStr)) {
+                diffImgName = diffStr;
+            } else if (diffStr.includes('demon')) {
+                diffImgName = 'demon-hard';
+            }
+            document.getElementById('details-diff-img').src = `https://gdbrowser.com/assets/difficulties/${diffImgName}.png`;
+
+            // Stars
+            const starsText = document.getElementById('details-stars');
+            if (lvl.starsReward || lvl.stars) {
+                starsText.style.display = 'inline-block';
+                starsText.innerText = `★ ${lvl.starsReward || lvl.stars}`;
+            } else {
+                starsText.style.display = 'none';
+            }
+
+            // Local actions
+            const leftActions = document.getElementById('local-actions-left');
+            const rightActions = document.getElementById('local-actions-right');
+            const editBtn = document.getElementById('btn-details-edit');
+            const delBtn = document.getElementById('btn-details-delete');
+            const uploadBtn = document.getElementById('btn-details-upload');
+
+            if (isLocal) {
+                leftActions.style.display = 'flex';
+                rightActions.style.display = 'flex';
+
+                editBtn.onclick = () => window.location.href = `editor.html?edit=${lvl.id}`;
+                delBtn.onclick = () => {
+                    if (confirm('Delete this level?')) {
+                        LevelManager.deleteCustomLevel(lvl.id);
+                        showScreen('editor-list');
+                        renderEditorList();
+                    }
+                };
+                uploadBtn.onclick = async () => {
+                    if (!Auth.user) return alert('Please Login to share levels!');
+                    const originalText = uploadBtn.innerText;
+                    uploadBtn.innerText = 'WAIT...';
+                    uploadBtn.disabled = true;
+                    const res = await Cloud.uploadLevel(lvl, Auth.user.uid, Auth.userData.username);
+                    if (res.success) {
+                        uploadBtn.innerText = 'SHARED!';
+                        uploadBtn.style.background = '#00ff88';
+                        uploadBtn.style.color = '#000';
+                    } else {
+                        alert('Upload failed: ' + res.error);
+                        uploadBtn.innerText = originalText;
+                        uploadBtn.disabled = false;
+                    }
+                };
+            } else {
+                leftActions.style.display = 'none';
+                rightActions.style.display = 'none';
+            }
 
             // Progress
             const best = JSON.parse(localStorage.getItem('gd_best_progress') || '{}');
