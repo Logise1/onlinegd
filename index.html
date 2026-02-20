@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Geometry Dash Clone</title>
+    <meta name="description" content="A browser-based Geometry Dash clone with cloud levels and online leaderboards.">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- Particles background -->
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- Main Menu -->
+    <div id="menu-screen">
+        <!-- Profile Bar -->
+        <div class="profile-bar">
+            <div class="profile-btn" id="btn-profile" title="My Profile">
+                <img src="sprites/ui/pause.png" style="width:70%; filter:invert(1);">
+            </div>
+            <div id="user-info" style="display:none">
+                <div id="username-display">Guest</div>
+                <div id="stars-display" style="color:#ffd700;">★ 0</div>
+            </div>
+        </div>
+
+        <img class="logo" src="sprites/ui/logo - Geometry dash.png" alt="Geometry Dash Logo"
+            onerror="this.outerHTML='<h1>GEOMETRY DASH</h1>'" />
+
+        <div class="menu-buttons">
+            <img class="menu-btn" id="btn-iconkit" src="sprites/ui/iconket.png" alt="Icon Kit" />
+            <img class="menu-btn" id="btn-play" src="sprites/ui/playbtn.png" alt="Play" />
+            <img class="menu-btn" id="btn-editor-main" src="sprites/ui/editor.png" alt="Editor" />
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="auth-modal">
+        <div class="auth-content">
+            <h2 id="auth-title">LOGIN</h2>
+            <input type="text" id="auth-username" class="auth-input" placeholder="Username">
+            <input type="password" id="auth-password" class="auth-input" placeholder="Password">
+            <div style="display:flex; gap:15px; margin-top:20px;">
+                <button class="toolbar-btn" id="btn-auth-submit" style="flex:1">SUBMIT</button>
+                <button class="toolbar-btn danger" id="btn-auth-close">CANCEL</button>
+            </div>
+            <p id="auth-toggle"
+                style="margin-top:20px; text-align:center; font-size:14px; cursor:pointer; opacity:0.8;">
+                Don't have an account? Register instead.
+            </p>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="auth-modal">
+        <div class="auth-content" style="max-width:550px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+                <h2 id="prof-username" style="color:#fff; margin:0;">Profile</h2>
+                <button class="toolbar-btn danger"
+                    onclick="document.getElementById('profile-modal').style.display='none'"
+                    style="padding:10px 15px;">X</button>
+            </div>
+            <div style="display:flex; gap:30px; margin-bottom:30px;">
+                <div id="prof-icon-preview"></div>
+                <div>
+                    <div id="prof-stars"
+                        style="font-size:32px; color:#ffd700; text-shadow:0 0 10px rgba(255,215,0,0.4);">★ 0</div>
+                    <button class="toolbar-btn" id="btn-logout"
+                        style="margin-top:15px; background:#ff3333;">LOGOUT</button>
+                </div>
+            </div>
+            <h3 style="margin-bottom:10px;">Statistics</h3>
+            <div id="prof-stats" style="font-size:16px; opacity:0.8;">
+                Levels Shared on Cloud: <span id="prof-count" style="color:#00ff88; font-weight:bold;">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screens -->
+    <div id="editor-menu-screen">
+        <img class="back-btn" id="btn-back-editor-menu" src="sprites/ui/back.png" alt="Back" />
+        <h2>EDITOR MENU</h2>
+        <div class="menu-buttons" style="flex-direction: column; gap: 10px; margin-top: 0;">
+            <div class="menu-choice-btn" id="choice-my-levels">
+                <span class="choice-title">MY LEVELS</span>
+                <span class="choice-desc">Create and edit your own tracks</span>
+            </div>
+            <div class="menu-choice-btn" id="choice-search">
+                <span class="choice-title">SEARCH</span>
+                <span class="choice-desc">Explore levels from the community</span>
+            </div>
+            <div class="menu-choice-btn" id="choice-leaderboard">
+                <span class="choice-title">LEADERBOARD</span>
+                <span class="choice-desc">Best players in the world</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="search-screen">
+        <img class="back-btn" src="sprites/ui/back.png" id="btn-search-back">
+        <h2>ONLINE LEVELS</h2>
+        <div class="level-list" id="search-list"></div>
+    </div>
+
+    <div id="leaderboard-screen">
+        <img class="back-btn" src="sprites/ui/back.png" id="btn-leader-back">
+        <h2>HALL OF FAME</h2>
+        <div class="level-list" id="leaderboard-list"></div>
+    </div>
+
+    <div id="level-select">
+        <img class="back-btn" id="btn-back-levels" src="sprites/ui/back.png" alt="Back" />
+        <h2>SELECT LEVEL</h2>
+        <div class="level-grid" id="level-grid"></div>
+    </div>
+
+    <div id="level-details-screen">
+        <img class="back-btn" id="btn-back-details" src="sprites/ui/back.png" alt="Back" />
+        <div class="level-details-container">
+            <div class="level-details-info">
+                <h1 class="level-details-name" id="details-name">LEVEL NAME</h1>
+                <div class="level-details-author" id="details-author">By Creator</div>
+            </div>
+
+            <img src="sprites/ui/playbtn.png" class="big-play-btn" id="btn-details-play">
+
+            <div class="details-progress-section">
+                <div class="details-progress-item">
+                    <div class="details-progress-label">
+                        <span>NORMAL MODE</span>
+                        <span id="details-progress-normal-text">0%</span>
+                    </div>
+                    <div class="details-progress-bar">
+                        <div class="details-progress-fill normal" id="details-progress-normal-fill" style="width: 0%">
+                        </div>
+                    </div>
+                </div>
+                <div class="details-progress-item">
+                    <div class="details-progress-label">
+                        <span>PRACTICE MODE</span>
+                        <span id="details-progress-practice-text">0%</span>
+                    </div>
+                    <div class="details-progress-bar">
+                        <div class="details-progress-fill practice" id="details-progress-practice-fill"
+                            style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="details-difficulty" id="details-diff">NORMAL</div>
+        </div>
+    </div>
+
+    <div id="editor-list">
+        <img class="back-btn" id="btn-back-editor" src="sprites/ui/back.png" alt="Back" />
+        <h2>MY LEVELS</h2>
+        <div class="level-list" id="editor-level-list"></div>
+        <div style="margin-top:40px;">
+            <button class="btn-create-level" id="btn-create-level">＋ CREATE NEW LEVEL</button>
+        </div>
+    </div>
+
+    <script src="js/audio.js"></script>
+    <script src="js/objects.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/engine.js"></script>
+    <script src="js/level.js"></script>
+
+    <script type="module">
+        import Auth from './js/auth.js';
+        import Cloud from './js/cloud.js';
+
+        // Particles
+        const pCanvas = document.getElementById('particles-canvas');
+        const pCtx = pCanvas.getContext('2d');
+        const particles = [];
+        function resize() { pCanvas.width = window.innerWidth; pCanvas.height = window.innerHeight; }
+        resize(); window.addEventListener('resize', resize);
+        for (let i = 0; i < 50; i++) particles.push({ x: Math.random() * pCanvas.width, y: Math.random() * pCanvas.height, vy: -0.2 - Math.random() * 0.4, size: 1 + Math.random() * 2, alpha: 0.1 + Math.random() * 0.4 });
+        function anim() { requestAnimationFrame(anim); pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height); for (let p of particles) { p.y += p.vy; if (p.y < -10) p.y = pCanvas.height + 10; pCtx.globalAlpha = p.alpha; pCtx.fillStyle = '#fff'; pCtx.beginPath(); pCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); pCtx.fill(); } }
+        anim();
+
+        LevelManager.init();
+
+        Auth.init((user, data) => {
+            const info = document.getElementById('user-info');
+            if (user && data) {
+                info.style.display = 'block';
+                document.getElementById('username-display').innerText = data.username;
+                document.getElementById('stars-display').innerText = `★ ${data.stars || 0}`;
+                document.getElementById('prof-username').innerText = data.username;
+                document.getElementById('prof-stars').innerText = `★ ${data.stars || 0}`;
+                document.getElementById('prof-count').innerText = (data.levels || []).length;
+                showProfileIcon(data);
+            } else {
+                info.style.display = 'none';
+            }
+        });
+
+        function showScreen(id) {
+            ['menu-screen', 'level-select', 'editor-list', 'search-screen', 'leaderboard-screen', 'editor-menu-screen', 'level-details-screen'].forEach(s => {
+                const el = document.getElementById(s);
+                if (el) el.style.display = (s === id) ? 'flex' : 'none';
+            });
+        }
+
+        document.getElementById('btn-profile').onclick = () => {
+            if (Auth.user) document.getElementById('profile-modal').style.display = 'flex';
+            else document.getElementById('auth-modal').style.display = 'flex';
+        };
+
+        let isReg = false;
+        document.getElementById('auth-toggle').onclick = () => {
+            isReg = !isReg;
+            document.getElementById('auth-title').innerText = isReg ? 'REGISTER' : 'LOGIN';
+            document.getElementById('auth-toggle').innerText = isReg ? 'Have account? Login' : 'No account? Register';
+        };
+
+        document.getElementById('btn-auth-close').onclick = () => document.getElementById('auth-modal').style.display = 'none';
+        document.getElementById('btn-auth-submit').onclick = async () => {
+            const u = document.getElementById('auth-username').value;
+            const p = document.getElementById('auth-password').value;
+            if (!u || !p) return;
+            const res = isReg ? await Auth.register(u, p) : await Auth.login(u, p);
+            if (res.success) document.getElementById('auth-modal').style.display = 'none';
+            else alert(res.error);
+        };
+
+        document.getElementById('btn-logout').onclick = () => { Auth.logout(); document.getElementById('profile-modal').style.display = 'none'; };
+
+        document.getElementById('btn-editor-main').onclick = () => showScreen('editor-menu-screen');
+
+        function playQuitSound() {
+            if (typeof AudioManager !== 'undefined') AudioManager.play('quit');
+        }
+
+        document.getElementById('btn-play').onclick = () => { showScreen('level-select'); renderLevelGrid(); };
+        document.getElementById('btn-back-levels').onclick = () => { playQuitSound(); showScreen('menu-screen'); };
+        document.getElementById('btn-back-editor').onclick = () => { playQuitSound(); showScreen('editor-menu-screen'); };
+        document.getElementById('btn-back-editor-menu').onclick = () => { playQuitSound(); showScreen('menu-screen'); };
+        document.getElementById('btn-search-back').onclick = () => { playQuitSound(); showScreen('editor-menu-screen'); };
+        document.getElementById('btn-leader-back').onclick = () => { playQuitSound(); showScreen('editor-menu-screen'); };
+        document.getElementById('btn-back-details').onclick = () => {
+            playQuitSound();
+            // Go back to the screen that opened it
+            const prev = document.getElementById('level-details-screen').dataset.from;
+            showScreen(prev || 'menu-screen');
+        };
+        document.getElementById('btn-create-level').onclick = () => window.location.href = 'editor.html';
+        document.getElementById('btn-iconkit').onclick = () => window.location.href = 'iconkit.html';
+
+        // Play menu music on first interaction
+        const startMusic = () => {
+            if (typeof AudioManager !== 'undefined') {
+                AudioManager.playMusic('menu');
+            }
+            document.removeEventListener('click', startMusic);
+        };
+        document.addEventListener('click', startMusic);
+
+        // Editor Menu Choices
+        document.getElementById('choice-my-levels').onclick = () => { showScreen('editor-list'); renderEditorList(); };
+        document.getElementById('choice-search').onclick = () => { showScreen('search-screen'); renderSearchList(); };
+        document.getElementById('choice-leaderboard').onclick = () => { showScreen('leaderboard-screen'); renderLeaderboard(); };
+
+        // Parallax Effect
+        window.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * -30;
+            const y = (e.clientY / window.innerHeight - 0.5) * -30;
+            document.documentElement.style.setProperty('--px', `${x}px`);
+            document.documentElement.style.setProperty('--py', `${y}px`);
+        });
+
+        async function renderSearchList() {
+            const list = document.getElementById('search-list');
+            list.innerHTML = '<div style="margin-top:20px; text-align:center;">CONNECTING TO CLOUD...</div>';
+            const levels = await Cloud.getAllLevels();
+            list.innerHTML = '';
+            levels.forEach(lvl => {
+                const item = document.createElement('div');
+                item.className = 'editor-level-item';
+
+                let adminExtras = '';
+                if (Auth.userData?.username?.toLowerCase() === 'logise') {
+                    adminExtras = `<button class="toolbar-btn admin-btn" style="background:#ffd700; color:#000; font-size:11px;">${lvl.featured ? 'UNFEATURE' : 'FEATURE'}</button>`;
+                }
+
+                item.innerHTML = `
+                    <div class="editor-level-info">
+                        <div class="editor-level-name">${lvl.name} ${lvl.featured ? '<span class="featured-badge">★ Featured</span>' : ''}</div>
+                        <div class="editor-level-meta">Created by ${lvl.creatorName}</div>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        ${adminExtras}
+                        <button class="toolbar-btn view-cloud" style="background:#00ff88; color:#000; min-width:100px;">VIEW</button>
+                    </div>
+                `;
+
+                if (item.querySelector('.admin-btn')) {
+                    item.querySelector('.admin-btn').onclick = async () => {
+                        const stars = lvl.featured ? 0 : prompt('Stars for this level?', '5');
+                        if (stars === null) return;
+                        await Cloud.setFeatured(lvl.id, !lvl.featured, parseInt(stars));
+                        renderSearchList();
+                    };
+                }
+
+                item.querySelector('.view-cloud').onclick = () => showLevelDetails(lvl, 'search-screen');
+                list.appendChild(item);
+            });
+        }
+
+        async function renderLeaderboard() {
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = '<div style="margin-top:20px; text-align:center;">FETCHING RANKINGS...</div>';
+            const users = await Cloud.getLeaderboard();
+            list.innerHTML = '';
+            users.forEach((u, i) => {
+                const item = document.createElement('div');
+                item.className = 'editor-level-item';
+                item.innerHTML = `
+                    <div style="width:50px; font-size:24px; font-weight:bold; color:#7850ff;">#${i + 1}</div>
+                    <div class="editor-level-info"><div class="editor-level-name">${u.username}</div></div>
+                    <div style="color:#ffd700; font-size:24px; font-weight:bold; filter:drop-shadow(0 0 5px rgba(255,215,0,0.3));">★ ${u.stars || 0}</div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function renderLevelGrid() {
+            const grid = document.getElementById('level-grid');
+            grid.innerHTML = '';
+            const diffColors = {
+                'Easy': '#00ffff',
+                'Normal': '#22ff99',
+                'Hard': '#ffff00',
+                'Harder': '#ff8800',
+                'Insane': '#ff00ff',
+                'Demon': '#ff4444'
+            };
+            LevelManager.builtInLevels.forEach(lvl => {
+                const color = diffColors[lvl.difficulty] || '#ffffff';
+                const card = document.createElement('div');
+                card.className = 'level-card';
+                card.innerHTML = `
+                    <div class="level-name">${lvl.name}</div>
+                    <div class="level-diff" style="color:${color}; text-shadow: 0 0 15px ${color}66;">${lvl.difficulty}</div>
+                    <button class="toolbar-btn" style="margin-top:20px; background:#00ff88; color:#000;">VIEW</button>
+                `;
+                card.onclick = () => showLevelDetails(lvl, 'level-select');
+                grid.appendChild(card);
+            });
+        }
+
+        function renderEditorList() {
+            const list = document.getElementById('editor-level-list');
+            list.innerHTML = '';
+            LevelManager.loadCustomLevels();
+            LevelManager.customLevels.forEach(lvl => {
+                const item = document.createElement('div');
+                item.className = 'editor-level-item';
+                item.innerHTML = `
+                    <div class="editor-level-info"><div class="editor-level-name">${lvl.name || 'Untitled'}</div></div>
+                    <div class="editor-level-actions">
+                        <button class="toolbar-btn view-local" style="background:#00ff88; color:#000;">VIEW</button>
+                        <button class="toolbar-btn" style="background:rgba(255,255,255,0.1);" onclick="window.location.href='editor.html?edit=${lvl.id}'">✏ EDIT</button>
+                        <button id="btn-share-${lvl.id}" class="toolbar-btn" style="background:#7850ff;">☁ CLOUD</button>
+                    </div>
+                `;
+                item.querySelector('.view-local').onclick = () => showLevelDetails(lvl, 'editor-list');
+                item.querySelector(`#btn-share-${lvl.id}`).onclick = async (e) => {
+                    if (!Auth.user) return alert('Please Login to share levels!');
+                    const btn = e.target;
+                    const originalText = btn.innerText;
+                    btn.innerText = 'WAIT...';
+                    btn.disabled = true;
+                    const res = await Cloud.uploadLevel(lvl, Auth.user.uid, Auth.userData.username);
+                    if (res.success) {
+                        btn.innerText = 'SHARED!';
+                        btn.style.background = '#00ff88';
+                        btn.style.color = '#000';
+                    } else {
+                        alert('Upload failed: ' + res.error);
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }
+                };
+                list.appendChild(item);
+            });
+        }
+
+        function showProfileIcon(data) {
+            const container = document.getElementById('prof-icon-preview');
+            const settings = data.iconSettings || {};
+            const type = settings.selected?.type || 'cube';
+            const id = settings.selected?.id || 1;
+            container.innerHTML = `<img src="https://gdbrowser.com/iconkit/premade/${type}_${id}.png" style="width:100px; filter:drop-shadow(0 0 20px #00ff88);">`;
+        }
+
+        function showLevelDetails(lvl, fromScreen) {
+            const screen = document.getElementById('level-details-screen');
+            screen.dataset.from = fromScreen;
+
+            document.getElementById('details-name').innerText = lvl.name || 'UNTITLED';
+            document.getElementById('details-author').innerText = `BY ${lvl.creatorName || (lvl.id < 100 ? 'ROBTOP' : 'YOU')}`;
+            document.getElementById('details-diff').innerText = (lvl.difficulty || 'Normal').toUpperCase();
+
+            // Progress
+            const best = JSON.parse(localStorage.getItem('gd_best_progress') || '{}');
+            const progress = best[lvl.id] || 0;
+
+            const bestPractice = JSON.parse(localStorage.getItem('gd_best_practice_progress') || '{}');
+            const practiceProgress = bestPractice[lvl.id] || 0;
+
+            document.getElementById('details-progress-normal-text').innerText = `${progress}%`;
+            document.getElementById('details-progress-normal-fill').style.width = `${progress}%`;
+
+            // Practice progress
+            document.getElementById('details-progress-practice-text').innerText = `${practiceProgress}%`;
+            document.getElementById('details-progress-practice-fill').style.width = `${practiceProgress}%`;
+
+            document.getElementById('btn-details-play').onclick = () => {
+                if (typeof AudioManager !== 'undefined') AudioManager.play('startLevel');
+                const query = lvl.creatorName ? `cloud=${lvl.id}` : `level=${lvl.id}`;
+                window.location.href = `game.html?${query}`;
+            };
+
+            showScreen('level-details-screen');
+        }
+    </script>
+</body>
+
+</html>

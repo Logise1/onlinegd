@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Geometry Dash — Playing</title>
+    <meta name="description" content="Geometry Dash Clone — Gameplay">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            background: #000;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+        <img id="pause-btn" src="sprites/ui/pause.png" alt="Pause"
+            onerror="this.outerHTML='<button id=&quot;pause-btn&quot; style=&quot;background:none;border:none;color:#fff;font-size:20px;cursor:pointer;pointer-events:all&quot;>⏸</button>'" />
+        <div id="progress-bar-bg">
+            <div id="progress-bar-fill"></div>
+        </div>
+        <span id="progress-text">0%</span>
+    </div>
+
+    <!-- Overlays -->
+    <div class="overlay" id="pause-overlay"></div>
+    <div class="overlay" id="death-overlay"></div>
+    <div class="overlay" id="complete-overlay"></div>
+
+    <script src="js/audio.js"></script>
+    <script src="js/objects.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/engine.js"></script>
+    <script src="js/level.js"></script>
+    <script src="js/ui.js"></script>
+    <script type="module">
+        import Cloud from './js/cloud.js';
+
+        /* ── Init Game ── */
+        const canvas = document.getElementById('game-canvas');
+        Engine.init(canvas);
+        UI.init();
+
+        const params = new URLSearchParams(window.location.search);
+        const levelId = params.get('level');
+        const cloudId = params.get('cloud');
+
+        LevelManager.init();
+
+        try {
+            Engine.bestProgress = JSON.parse(localStorage.getItem('gd_best_progress') || '{}');
+        } catch (e) { Engine.bestProgress = {}; }
+
+        let levelData = null;
+
+        async function start() {
+            if (levelId === 'editor_test') {
+                try {
+                    levelData = JSON.parse(localStorage.getItem('gd_editor_test'));
+                } catch (e) { }
+            } else if (levelId) {
+                levelData = LevelManager.getLevel(levelId);
+            } else if (cloudId) {
+                const cloudLevels = await Cloud.getAllLevels(); // We could optimize this to getDoc
+                levelData = cloudLevels.find(l => l.id === cloudId);
+                if (levelData) Engine.currentCloudLevel = levelData;
+            }
+
+            if (!levelData) {
+                alert('Level not found.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            if (levelData.objects) {
+                levelData.objects.forEach(obj => { delete obj._triggered; });
+            }
+            Engine.loadLevel(levelData);
+
+            window.addEventListener('levelComplete', async (e) => {
+                const { currentCloudLevel } = e.detail;
+                if (currentCloudLevel && currentCloudLevel.featured && Auth.user) {
+                    const stars = currentCloudLevel.starsReward || 5;
+                    await Cloud.awardStars(Auth.user.uid, stars);
+                    alert(`★ AWESOME! You gained ${stars} stars for completing a Featured Level!`);
+                    // Update local stars count too if needed
+                }
+            });
+
+            Engine.start();
+        }
+
+        start();
+    </script>
+</body>
+
+</html>

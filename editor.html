@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Geometry Dash — Level Editor</title>
+    <meta name="description" content="Geometry Dash Clone — Level Editor">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div id="editor-container">
+        <!-- Sidebar -->
+        <div id="editor-sidebar">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;">
+                <img class="back-btn" src="sprites/ui/back.png" alt="Back"
+                    style="position:static;width:30px;height:30px" onclick="Editor.goBack()"
+                    onerror="this.outerHTML='<button class=&quot;toolbar-btn&quot; onclick=&quot;Editor.goBack()&quot;>←</button>'" />
+                <span style="font-size:16px">Editor</span>
+                <span></span>
+            </div>
+            <h3>Tools</h3>
+            <div id="editor-tools">
+                <button class="toolbar-btn tool-btn active" id="tool-build" onclick="Editor.setTool('build')">🔨
+                    Build</button>
+                <button class="toolbar-btn tool-btn" id="tool-delete" onclick="Editor.setTool('delete')">❌
+                    Delete</button>
+                <button class="toolbar-btn tool-btn" id="tool-edit" onclick="Editor.setTool('edit')">🔧 Edit</button>
+                <button class="toolbar-btn tool-btn" id="tool-scale" onclick="Editor.setTool('scale')">⤢ Scale</button>
+                <button class="toolbar-btn tool-btn" onclick="Editor.toggleGrid()">🌐 Grid</button>
+            </div>
+            <!-- Palette (for Build tool) -->
+            <div id="editor-palette-container">
+                <h3>Objects</h3>
+                <div class="editor-category-tabs"></div>
+                <div class="editor-objects"></div>
+            </div>
+
+            <!-- Properties (for Edit/Scale tools) -->
+            <div id="editor-properties-container" style="display:none; padding:10px;">
+                <h3>Properties</h3>
+                <div id="prop-message" style="opacity:0.6;font-style:italic">Select an object to edit</div>
+                <div id="prop-form"
+                    style="display:none; display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+
+            <div id="editor-toolbar">
+                <button class="toolbar-btn" onclick="Editor.saveLevel()">💾 Save</button>
+                <button class="toolbar-btn" onclick="Editor.testPlay()">▶ Test</button>
+                <button class="toolbar-btn" onclick="Editor.showSettings()">⚙ Settings</button>
+                <button class="toolbar-btn" onclick="Editor.undo()">↩ Undo</button>
+                <button class="toolbar-btn" id="btn-sync-music" onclick="Editor.toggleSyncMusic()">🎵 Play
+                    Music</button>
+            </div>
+        </div>
+
+
+
+        <!-- Canvas -->
+        <canvas id="editor-canvas"></canvas>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="editor-settings-modal" class="overlay">
+        <div class="settings-panel">
+            <h3>Level Settings</h3>
+            <label for="setting-name">Level Name</label>
+            <input type="text" id="setting-name" value="My Level" />
+            <label for="setting-speed">Speed</label>
+            <select id="setting-speed">
+                <option value="slow">Slow (0.5×)</option>
+                <option value="normal" selected>Normal (1×)</option>
+                <option value="fast">Fast (2×)</option>
+                <option value="vfast">Very Fast (3×)</option>
+                <option value="vvfast">Insanely Fast (4×)</option>
+            </select>
+            <label for="setting-song">Song</label>
+            <select id="setting-song">
+                <option value="StereoMadness.mp3">Stereo Madness</option>
+                <option value="BackOnTrack.mp3">Back On Track</option>
+                <option value="Polargeist.mp3">Polargeist</option>
+                <option value="DryOut.mp3">Dry Out</option>
+                <option value="BaseAfterBase.mp3">Base After Base</option>
+                <option value="CantLetGo.mp3">Can't Let Go</option>
+                <option value="Jumper.mp3">Jumper</option>
+                <option value="TimeMachine.mp3">Time Machine</option>
+                <option value="Cycles.mp3">Cycles</option>
+                <option value="xStep.mp3">xStep</option>
+                <option value="Clutterfunk.mp3">Clutterfunk</option>
+                <option value="TheoryOfEverything.mp3">Theory of Everything</option>
+                <option value="Electroman.mp3">Electroman Adventures</option>
+                <option value="Clubstep.mp3">Clubstep</option>
+                <option value="Electrodynamix.mp3">Electrodynamix</option>
+                <option value="HexagonForce.mp3">Hexagon Force</option>
+                <option value="BlastProcessing.mp3">Blast Processing</option>
+                <option value="TheoryOfEverything2.mp3">Theory of Everything 2</option>
+                <option value="GeometricalDominator.mp3">Geometrical Dominator</option>
+                <option value="Deadlocked.mp3">Deadlocked</option>
+                <option value="Fingerdash.mp3">Fingerdash</option>
+                <option value="Dash.mp3">Dash</option>
+                <option value="PowerTrip.mp3">Power Trip</option>
+                <option value="TheChallenge.mp3">The Challenge</option>
+            </select>
+            <label for="setting-bg">Background Color</label>
+            <input type="color" id="setting-bg" value="#0033aa" />
+            <label for="setting-ground">Ground Color</label>
+            <input type="color" id="setting-ground" value="#001166" />
+            <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="toolbar-btn" onclick="Editor.hideSettings()" style="flex:1">✓ Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Object Popup Modal -->
+    <div id="object-popup-modal" class="overlay">
+        <div class="settings-panel popup-panel" style="max-width:320px;">
+            <h3 id="popup-title">Object Settings</h3>
+            <div id="popup-content" style="display:flex; flex-direction:column; gap:10px;">
+                <!-- Populated via JS -->
+            </div>
+            <div style="display:flex;gap:8px;margin-top:20px">
+                <button class="toolbar-btn" onclick="Editor.hideObjectPopup()" style="flex:1">✓ Save & Close</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="js/audio.js"></script>
+    <script src="js/objects.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/engine.js"></script>
+    <script src="js/level.js"></script>
+    <script src="js/editor.js"></script>
+    <script>
+        LevelManager.init();
+        preloadAllSprites();
+        const editorCanvas = document.getElementById('editor-canvas');
+
+        // Wait for preload/styles
+        setTimeout(() => {
+            Editor.init(editorCanvas);
+            Editor.resize();
+            Editor.render();
+        }, 100);
+
+        // ESC = save & go back
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Escape') {
+                e.preventDefault();
+                Editor.goBack();
+            }
+        });
+    </script>
+</body>
+
+</html>
