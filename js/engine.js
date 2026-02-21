@@ -117,6 +117,13 @@ const Engine = {
         this.groupModifications = {};
         this.lastPortalY = undefined;
 
+        if (levelData.originalBgColor === undefined) {
+            levelData.originalBgColor = levelData.bgColor || '#0033aa';
+            levelData.originalGroundColor = levelData.groundColor || '#001166';
+        }
+        levelData.bgColor = levelData.originalBgColor;
+        levelData.groundColor = levelData.originalGroundColor;
+
         // Reset triggered flags on ALL objects
         if (levelData.objects) {
             levelData.objects.forEach(obj => { delete obj._triggered; });
@@ -228,6 +235,22 @@ const Engine = {
                 this.state = 'playing';
                 this.camera.shake = 0;
                 this.particles = [];
+                this.activeAnimations = [];
+
+                // Restore trigger state
+                this.groupModifications = JSON.parse(JSON.stringify(cp.groupModifications || {}));
+                this.level.bgColor = cp.bgColor || this.level.originalBgColor;
+                this.level.groundColor = cp.groundColor || this.level.originalGroundColor;
+
+                if (this.level.objects) {
+                    this.level.objects.forEach(obj => {
+                        // Reset trigger flags for anything ahead of the checkpoint
+                        if (obj.x * BLOCK_SIZE >= cp.x - BLOCK_SIZE * 5) {
+                            delete obj._triggered;
+                        }
+                    });
+                }
+
                 if (typeof UI !== 'undefined') UI.hideAll();
 
                 if (typeof AudioManager !== 'undefined') {
@@ -362,7 +385,10 @@ const Engine = {
                     mode: p.mode,
                     gravityDir: p.gravityDir,
                     mini: p.mini,
-                    speed: this.currentSpeed
+                    speed: this.currentSpeed,
+                    groupModifications: JSON.parse(JSON.stringify(this.groupModifications || {})),
+                    bgColor: this.level.bgColor,
+                    groundColor: this.level.groundColor
                 });
                 this.lastCheckpointX = p.x;
             }

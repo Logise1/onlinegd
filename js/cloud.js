@@ -76,6 +76,30 @@ const Cloud = {
     async setFeatured(levelId, featured, stars) {
         const ref = doc(db, "levels", levelId);
         await updateDoc(ref, { featured, starsReward: stars || 0 });
+    },
+
+    async syncPrivateLevel(levelData, userId) {
+        if (!userId) return { success: false, error: 'No user ID provided' };
+        try {
+            const levelRef = doc(db, "users", userId, "private_levels", levelData.id);
+            await setDoc(levelRef, { ...levelData, uploadedAt: Date.now() });
+            return { success: true };
+        } catch (e) {
+            console.error("Error syncing private level: ", e);
+            return { success: false, error: e.message };
+        }
+    },
+
+    async getAllPrivateLevels(userId) {
+        if (!userId) return [];
+        try {
+            const q = collection(db, "users", userId, "private_levels");
+            const querySnapshot = await getDocs(q);
+            return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (e) {
+            console.error("Error fetching private levels: ", e);
+            return [];
+        }
     }
 };
 

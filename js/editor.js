@@ -171,6 +171,11 @@ const Editor = {
                 this.placeObject(this.hoveredCell.x, this.hoveredCell.y);
             }
 
+            // Continuous deletion
+            if (this.currentTool === 'delete' && this.ctrlPressed && !this.isPanning && !this.isSelecting && !this.isDraggingObjects && (e.buttons & 1)) {
+                this.deleteAt(this.hoveredCell.x, this.hoveredCell.y);
+            }
+
             // Selection Logic
             if (this.isSelecting) {
                 this.selectionRect.x2 = mx;
@@ -263,7 +268,7 @@ const Editor = {
             if (e.code === 'ControlLeft' || e.code === 'ControlRight') this.ctrlPressed = true;
             if (e.ctrlKey && e.code === 'KeyZ') { e.preventDefault(); this.undo(); }
             if (e.ctrlKey && e.code === 'KeyS') { e.preventDefault(); this.saveLevel(); }
-            if (e.code === 'Delete') { if (this.selectedObject) this.deleteSelected(); }
+            if (e.code === 'Delete') { if (this.selectedObject || (this.selectedObjects && this.selectedObjects.length > 0)) this.deleteSelected(); }
             if (e.code === 'Digit1') this.setTool('build');
             if (e.code === 'Digit2') this.setTool('edit');
             if (e.code === 'Digit3') this.setTool('delete');
@@ -321,8 +326,14 @@ const Editor = {
     handleDoubleClick(cx, cy) {
         const obj = this.getObjectAt(cx, cy);
         if (obj) {
-            this.selectedObject = obj;
-            this.showObjectPopup(obj);
+            const type = getObjectType(obj.type);
+            if (type.category === 'trigger') {
+                this.selectedObject = obj;
+                this.showObjectPopup(obj);
+            } else {
+                this.setTool('edit');
+                this.selectObjectAt(cx, cy);
+            }
         }
     },
 
@@ -451,33 +462,53 @@ const Editor = {
 
             if (type.triggerType === 'move') {
                 html += `
-                    <label>Move X (tiles):</label>
-                    <input type="number" step="0.5" value="${obj.moveX || 0}" 
-                           onchange="Editor.updateProp('moveX', parseFloat(this.value))" style="width:60px">
-                    <label>Move Y (tiles):</label>
-                    <input type="number" step="0.5" value="${obj.moveY || 0}" 
-                           onchange="Editor.updateProp('moveY', parseFloat(this.value))" style="width:60px">
-                    <label>Duration (s):</label>
-                    <input type="number" min="0" step="0.1" value="${obj.moveDuration || 0.5}" 
-                           onchange="Editor.updateProp('moveDuration', parseFloat(this.value))" style="width:60px">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div>
+                            <label>Move X (tiles):</label>
+                            <input type="number" step="0.5" value="${obj.moveX || 0}" 
+                                   onchange="Editor.updateProp('moveX', parseFloat(this.value))" style="width:100%">
+                        </div>
+                        <div>
+                            <label>Move Y (tiles):</label>
+                            <input type="number" step="0.5" value="${obj.moveY || 0}" 
+                                   onchange="Editor.updateProp('moveY', parseFloat(this.value))" style="width:100%">
+                        </div>
+                        <div>
+                            <label>Duration (s):</label>
+                            <input type="number" min="0" step="0.1" value="${obj.moveDuration || 0.5}" 
+                                   onchange="Editor.updateProp('moveDuration', parseFloat(this.value))" style="width:100%">
+                        </div>
+                    </div>
                 `;
             } else if (type.triggerType === 'color') {
                 html += `
-                    <label>Color:</label>
-                    <input type="color" value="${obj.color || '#ffffff'}" 
-                           onchange="Editor.updateProp('color', this.value)">
-                    <label>Fade Time (s):</label>
-                    <input type="number" min="0" step="0.1" value="${obj.fadeTime || 0.5}" 
-                           onchange="Editor.updateProp('fadeTime', parseFloat(this.value))" style="width:60px">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div>
+                            <label>Color:</label>
+                            <input type="color" value="${obj.color || '#ffffff'}" 
+                                   onchange="Editor.updateProp('color', this.value)" style="width:100%; height:24px;">
+                        </div>
+                        <div>
+                            <label>Fade Time (s):</label>
+                            <input type="number" min="0" step="0.1" value="${obj.fadeTime || 0.5}" 
+                                   onchange="Editor.updateProp('fadeTime', parseFloat(this.value))" style="width:100%">
+                        </div>
+                    </div>
                 `;
             } else if (type.triggerType === 'alpha') {
                 html += `
-                    <label>Opacity (0-1):</label>
-                    <input type="number" min="0" max="1" step="0.1" value="${obj.opacity !== undefined ? obj.opacity : 1}" 
-                           onchange="Editor.updateProp('opacity', parseFloat(this.value))" style="width:60px">
-                    <label>Fade Time (s):</label>
-                    <input type="number" min="0" step="0.1" value="${obj.fadeTime || 0.5}" 
-                           onchange="Editor.updateProp('fadeTime', parseFloat(this.value))" style="width:60px">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div>
+                            <label>Opacity (0-1):</label>
+                            <input type="number" min="0" max="1" step="0.1" value="${obj.opacity !== undefined ? obj.opacity : 1}" 
+                                   onchange="Editor.updateProp('opacity', parseFloat(this.value))" style="width:100%">
+                        </div>
+                        <div>
+                            <label>Fade Time (s):</label>
+                            <input type="number" min="0" step="0.1" value="${obj.fadeTime || 0.5}" 
+                                   onchange="Editor.updateProp('fadeTime', parseFloat(this.value))" style="width:100%">
+                        </div>
+                    </div>
                 `;
             }
             html += `</div>`;
@@ -492,9 +523,15 @@ const Editor = {
     },
 
     updateProp(prop, val) {
-        if (!this.selectedObject) return;
+        if (!this.selectedObject && (!this.selectedObjects || this.selectedObjects.length === 0)) return;
 
-        this.selectedObject[prop] = val;
+        if (this.selectedObjects && this.selectedObjects.length > 0) {
+            this.selectedObjects.forEach(obj => {
+                obj[prop] = val;
+            });
+        } else if (this.selectedObject) {
+            this.selectedObject[prop] = val;
+        }
 
         // Update range label if it exists
         const labelMap = { 'scale': 'val-scale', 'rotation': 'val-rot' };
@@ -508,7 +545,14 @@ const Editor = {
     },
 
     deleteSelected() {
-        if (this.selectedObject) {
+        if (this.selectedObjects && this.selectedObjects.length > 0) {
+            this.pushUndo();
+            this.objects = this.objects.filter(o => !this.selectedObjects.includes(o));
+            this.selectedObjects = [];
+            this.selectedObject = null;
+            this.updatePropertiesPanel();
+            this.render();
+        } else if (this.selectedObject) {
             this.deleteObject(this.selectedObject);
             this.selectedObject = null;
             this.updatePropertiesPanel();
@@ -873,9 +917,18 @@ const Editor = {
 
             // Selection highlight
             if (this.selectedObjects.includes(obj)) {
+                ctx.save();
+                if (rot !== 0 || type.rotates) {
+                    const cx = ox + ow / 2;
+                    const cy = oy + oh / 2;
+                    ctx.translate(cx, cy);
+                    ctx.rotate((rot + (type.rotates ? performance.now() / 10 : 0)) * Math.PI / 180);
+                    ctx.translate(-cx, -cy);
+                }
                 ctx.strokeStyle = '#00ff88';
                 ctx.lineWidth = 2 / this.zoom;
                 ctx.strokeRect(ox, oy, ow, oh);
+                ctx.restore();
             }
 
             // Non-touch trigger line

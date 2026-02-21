@@ -396,10 +396,32 @@
             });
         }
 
-        function renderEditorList() {
+        async function renderEditorList() {
             const list = document.getElementById('editor-level-list');
-            list.innerHTML = '';
+            list.innerHTML = '<div style="margin-top:20px; text-align:center;">LOADING...</div>';
             LevelManager.loadCustomLevels();
+
+            if (Auth.user) {
+                const cloudLevels = await Cloud.getAllPrivateLevels(Auth.user.uid);
+
+                cloudLevels.forEach(clvl => {
+                    const localLvl = LevelManager.customLevels.find(l => l.id === clvl.id);
+                    if (!localLvl || clvl.lastEdited > (localLvl.lastEdited || 0)) {
+                        LevelManager.saveCustomLevel(clvl);
+                    } else if (localLvl && (localLvl.lastEdited || 0) > (clvl.lastEdited || 0)) {
+                        Cloud.syncPrivateLevel(localLvl, Auth.user.uid);
+                    }
+                });
+
+                // Check for local levels not in cloud
+                LevelManager.customLevels.forEach(localLvl => {
+                    if (!cloudLevels.find(l => l.id === localLvl.id)) {
+                        Cloud.syncPrivateLevel(localLvl, Auth.user.uid);
+                    }
+                });
+            }
+
+            list.innerHTML = '';
 
             // Sort custom levels by lastEdited descending
             const sortedLevels = [...LevelManager.customLevels].sort((a, b) => {
