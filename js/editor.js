@@ -60,6 +60,17 @@ const Editor = {
 
         this.setupInput();
         this.buildPalette();
+
+        try {
+            const routeJson = localStorage.getItem('gd_test_route');
+            if (routeJson) {
+                this.testRoute = JSON.parse(routeJson);
+                localStorage.removeItem('gd_test_route');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
         this.render();
 
         // Load from URL param if editing existing level
@@ -974,6 +985,23 @@ const Editor = {
                 ctx.stroke();
                 ctx.globalAlpha = 1;
             }
+        }
+
+        // Test Play Route
+        if (this.testRoute && this.testRoute.length > 0) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(0, 255, 136, 0.6)';
+            ctx.lineWidth = 4 / this.zoom;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            for (let i = 0; i < this.testRoute.length; i++) {
+                const pt = this.testRoute[i];
+                if (i === 0) ctx.moveTo(pt.x, pt.y);
+                else ctx.lineTo(pt.x, pt.y);
+            }
+            ctx.stroke();
+            ctx.restore();
         }
 
         // Selection Rect

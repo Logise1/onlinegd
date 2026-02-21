@@ -54,6 +54,11 @@ const UI = {
     },
 
     goBack() {
+        if (typeof Engine !== 'undefined' && Engine.routeData && Engine.routeData.length > 0) {
+            try {
+                localStorage.setItem('gd_test_route', JSON.stringify(Engine.routeData));
+            } catch (e) { }
+        }
         window.location.href = this.backUrl;
     },
 

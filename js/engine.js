@@ -116,6 +116,8 @@ const Engine = {
         this.activeAnimations = [];
         this.groupModifications = {};
         this.lastPortalY = undefined;
+        this.routeData = [];
+        this.routeTicks = 0;
 
         if (levelData.originalBgColor === undefined) {
             levelData.originalBgColor = levelData.bgColor || '#0033aa';
@@ -396,6 +398,15 @@ const Engine = {
 
         // Update animations
         this.updateAnimations();
+
+        // Record route
+        if (this.routeData && this.routeTicks !== undefined) {
+            this.routeTicks++;
+            if (this.routeTicks % 3 === 0) {
+                const pSize = p.mini ? BLOCK_SIZE * 0.5 : BLOCK_SIZE;
+                this.routeData.push({ x: Math.round(p.x + pSize / 2), y: Math.round(p.y + pSize / 2) });
+            }
+        }
     },
 
     activateTrigger(obj) {
