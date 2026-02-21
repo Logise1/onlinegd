@@ -750,6 +750,7 @@ const Engine = {
     checkBoundaries() {
         const p = this.player;
         const pSize = p.mini ? BLOCK_SIZE * 0.5 : BLOCK_SIZE;
+        const hasCeiling = (p.mode === 'ship' || p.mode === 'ufo' || p.mode === 'wave');
 
         if (p.gravityDir === 1) {
             // Normal gravity
@@ -759,13 +760,13 @@ const Engine = {
                 p.onGround = true;
                 p.canJump = true;
             }
-            if (p.y <= this.ceilingY && !p.freeFly) {
+            if (p.y <= this.ceilingY && !p.freeFly && hasCeiling) {
                 p.y = this.ceilingY;
                 p.vy = 0;
             }
         } else {
             // Reversed gravity
-            if (p.y <= this.ceilingY && !p.freeFly) {
+            if (p.y <= this.ceilingY && !p.freeFly && hasCeiling) {
                 p.y = this.ceilingY;
                 p.vy = 0;
                 p.onGround = true;
@@ -787,7 +788,7 @@ const Engine = {
             return;
         }
 
-        if (hitBottomOffscreen || (hitCeilingOffscreen && !p.freeFly)) {
+        if (hitBottomOffscreen || (hitCeilingOffscreen && !p.freeFly && hasCeiling)) {
             this.die();
         }
     },
