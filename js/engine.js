@@ -116,6 +116,9 @@ const Engine = {
         this.activeAnimations = [];
         this.groupModifications = {};
         this.lastPortalY = undefined;
+        if (!this.bestRouteData || (this.routeData && this.routeData.length > this.bestRouteData.length)) {
+            this.bestRouteData = this.routeData || [];
+        }
         this.routeData = [];
         this.routeTicks = 0;
 
