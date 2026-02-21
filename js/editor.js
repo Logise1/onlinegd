@@ -65,9 +65,14 @@ const Editor = {
         // Load from URL param if editing existing level
         const params = new URLSearchParams(window.location.search);
         const editId = params.get('edit');
+        const collabId = params.get('collab');
         if (editId) {
             this.currentLevelId = editId;
             this.loadLevel(editId);
+        } else if (collabId) {
+            this.currentLevelId = collabId;
+            this.isCollab = true;
+            this.loadLevel(collabId);
         } else {
             // New level — assign an ID right away
             this.currentLevelId = 'custom_' + Date.now();
@@ -684,8 +689,14 @@ const Editor = {
     },
 
     autoSave() {
-        const level = this._buildLevel();
-        LevelManager.saveCustomLevel(level);
+        if (this.isCollab && window.Cloud && window.Auth && window.Auth.userData) {
+            // Handle Collab Syncing
+            const objects = JSON.parse(JSON.stringify(this.objects || [])); // just objects for simplicity, or we can build whole level
+            window.Cloud.updateCollab(this.currentLevelId, objects, window.Auth.userData.username);
+        } else {
+            const level = this._buildLevel();
+            LevelManager.saveCustomLevel(level);
+        }
     },
 
     saveLevel() {
@@ -695,14 +706,37 @@ const Editor = {
 
     goBack() {
         this.autoSave();
+        if (this.unsubscribeCollab) this.unsubscribeCollab();
         window.location.href = 'index.html';
     },
 
-    loadLevel(id) {
+    async loadLevel(id) {
+        if (this.isCollab && window.Cloud && window.Auth && window.Auth.userData) {
+            // Load collab from cloud & subscribe
+            this.unsubscribeCollab = window.Cloud.subscribeCollab(id, (collabData) => {
+                // Initial load
+                if (!this.levelLoaded) {
+                    this.levelLoaded = true;
+                    this._applyLevelData(collabData);
+                    this.render();
+                } else if (collabData.lastEditedUser !== window.Auth.userData.username) {
+                    // Update from OTHER user
+                    this.objects = JSON.parse(JSON.stringify(collabData.objects || []));
+                    this.render();
+                }
+            });
+            return;
+        }
+
         if (!LevelManager.builtInLevels.length) LevelManager.init();
         const level = LevelManager.getLevel(id);
         if (!level) return;
 
+        this._applyLevelData(level);
+        this.render();
+    },
+
+    _applyLevelData(level) {
         this.currentLevelId = level.id;
         this.objects = JSON.parse(JSON.stringify(level.objects || []));
         this.levelName = level.name || 'Untitled';
@@ -722,8 +756,6 @@ const Editor = {
         if (speedInput) speedInput.value = this.levelSpeed;
         const songInput = document.getElementById('setting-song');
         if (songInput) songInput.value = this.levelSong;
-
-        this.render();
     },
 
     clearAll() {

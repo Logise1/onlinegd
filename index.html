@@ -95,7 +95,17 @@
                 <span class="choice-title">LEADERBOARD</span>
                 <span class="choice-desc">Best players in the world</span>
             </div>
+            <div class="menu-choice-btn" id="choice-collabs">
+                <span class="choice-title">COLLABS</span>
+                <span class="choice-desc">Join your friends in real time</span>
+            </div>
         </div>
+    </div>
+
+    <div id="collabs-screen">
+        <img class="back-btn" src="sprites/ui/back.png" id="btn-collabs-back">
+        <h2>COLLABS</h2>
+        <div class="level-list" id="collabs-list"></div>
     </div>
 
     <div id="search-screen">
@@ -146,7 +156,9 @@
                 <div id="local-actions-right" style="display: none; flex-direction: column; gap: 10px;">
                     <button class="toolbar-btn" id="btn-details-upload" style="background:#7850ff; width: 80px;">☁
                         UPLOAD</button>
-                    <button class="toolbar-btn" style="visibility: hidden; width: 80px;">.</button>
+                    <button class="toolbar-btn" id="btn-details-collab"
+                        style="background:#00ccff; width: 80px; font-size:11px;">🤝
+                        COLLAB</button>
                 </div>
             </div>
 
@@ -266,6 +278,7 @@
         document.getElementById('btn-back-editor-menu').onclick = () => { playQuitSound(); showScreen('menu-screen'); };
         document.getElementById('btn-search-back').onclick = () => { playQuitSound(); showScreen('editor-menu-screen'); };
         document.getElementById('btn-leader-back').onclick = () => { playQuitSound(); showScreen('editor-menu-screen'); };
+        document.getElementById('btn-collabs-back').onclick = () => { playQuitSound(); showScreen('editor-menu-screen'); };
         document.getElementById('btn-back-details').onclick = () => {
             playQuitSound();
             // Go back to the screen that opened it
@@ -291,6 +304,7 @@
         document.getElementById('choice-my-levels').onclick = () => { showScreen('editor-list'); renderEditorList(); };
         document.getElementById('choice-search').onclick = () => { showScreen('search-screen'); renderSearchList(); };
         document.getElementById('choice-leaderboard').onclick = () => { showScreen('leaderboard-screen'); renderLeaderboard(); };
+        document.getElementById('choice-collabs').onclick = () => { showScreen('collabs-screen'); renderCollabsList(); };
 
         // Parallax Effect
         window.addEventListener('mousemove', (e) => {
@@ -299,6 +313,43 @@
             document.documentElement.style.setProperty('--px', `${x}px`);
             document.documentElement.style.setProperty('--py', `${y}px`);
         });
+
+        async function renderCollabsList() {
+            const list = document.getElementById('collabs-list');
+            list.innerHTML = '<div style="margin-top:20px; text-align:center;">LOADING COLLABS...</div>';
+            if (!Auth.user) {
+                list.innerHTML = '<div style="margin-top:20px; text-align:center; color:#ff4444;">Please Login to view collabs.</div>';
+                return;
+            }
+            const levels = await Cloud.getCollabs(Auth.userData.username);
+            list.innerHTML = '';
+
+            if (levels.length === 0) {
+                list.innerHTML = '<div style="margin-top:20px; text-align:center; opacity:0.7;">No collabs yet. Open one of your levels and click COLLAB to invite someone!</div>';
+            }
+
+            levels.forEach(lvl => {
+                const item = document.createElement('div');
+                item.className = 'editor-level-item';
+                item.innerHTML = `
+                    <div style="display:flex; align-items:center; justify-content:center; width: 40px;">
+                        <img src="sprites/ui/normal.png" style="width:100%;">
+                    </div>
+                    <div class="editor-level-info">
+                        <div class="editor-level-name">${lvl.name || 'UNTITLED'}</div>
+                        <div class="editor-level-stats">Owner: ${lvl.owner} | Collaborators: ${lvl.collaborators.join(', ')}</div>
+                    </div>
+                    <div class="editor-level-actions">
+                        <button class="toolbar-btn view-collab" style="background:#00ccff; color:#000; min-width:80px;">EDIT</button>
+                    </div>
+                `;
+                item.querySelector('.view-collab').onclick = () => {
+                    // Start live collaboration
+                    window.location.href = `editor.html?collab=${lvl.id}`;
+                };
+                list.appendChild(item);
+            });
+        }
 
         async function renderSearchList() {
             const list = document.getElementById('search-list');
@@ -530,6 +581,32 @@
                         alert('Upload failed: ' + res.error);
                         uploadBtn.innerText = originalText;
                         uploadBtn.disabled = false;
+                    }
+                };
+
+                const collabBtn = document.getElementById('btn-details-collab');
+                collabBtn.onclick = async () => {
+                    if (!Auth.user) return alert('Please Login to invite collaborators!');
+                    const targetUsername = prompt('Enter the username of the player you want to collaborate with:');
+                    if (!targetUsername || targetUsername.trim() === '') return;
+
+                    if (targetUsername === Auth.userData.username) {
+                        return alert('You cannot invite yourself!');
+                    }
+
+                    collabBtn.innerText = 'WAIT...';
+                    collabBtn.disabled = true;
+
+                    const res = await Cloud.createCollab(lvl, targetUsername.trim(), Auth.userData.username);
+                    if (res.success) {
+                        alert(`Successfully added ${targetUsername} as a collaborator! They can find it in their COLLABS menu.`);
+                        collabBtn.innerText = 'INVITED!';
+                        collabBtn.style.background = '#00ff88';
+                        collabBtn.style.color = '#000';
+                    } else {
+                        alert('Failed to add collaborator: ' + res.error);
+                        collabBtn.innerText = '🤝 COLLAB';
+                        collabBtn.disabled = false;
                     }
                 };
             } else {

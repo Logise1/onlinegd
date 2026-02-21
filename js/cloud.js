@@ -10,7 +10,8 @@ import {
     where,
     getDoc,
     updateDoc,
-    increment
+    increment,
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const Cloud = {
@@ -99,6 +100,65 @@ const Cloud = {
         } catch (e) {
             console.error("Error fetching private levels: ", e);
             return [];
+        }
+    },
+
+    async createCollab(localLevel, targetUsername, currentUsername) {
+        const q = query(collection(db, "users"), where("username", "==", targetUsername));
+        const snap = await getDocs(q);
+        if (snap.empty) return { success: false, error: "Target user not found" };
+
+        const collabId = "collab_" + localLevel.id;
+        const collabRef = doc(db, "collab_levels", collabId);
+
+        const collabData = {
+            ...localLevel,
+            id: collabId,
+            collaborators: [currentUsername, targetUsername],
+            owner: currentUsername,
+            lastEdited: Date.now(),
+            lastEditedUser: currentUsername
+        };
+
+        try {
+            await setDoc(collabRef, collabData);
+            return { success: true, collabId };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    },
+
+    async getCollabs(username) {
+        if (!username) return [];
+        try {
+            const q = query(collection(db, "collab_levels"), where("collaborators", "array-contains", username));
+            const querySnapshot = await getDocs(q);
+            return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (e) {
+            console.error("Error fetching collabs: ", e);
+            return [];
+        }
+    },
+
+    subscribeCollab(collabId, onUpdate) {
+        const collabRef = doc(db, "collab_levels", collabId);
+        return onSnapshot(collabRef, (docSnap) => {
+            if (docSnap.exists()) {
+                onUpdate(docSnap.data());
+            }
+        });
+    },
+
+    async updateCollab(collabId, objects, currentUsername) {
+        const collabRef = doc(db, "collab_levels", collabId);
+        try {
+            await updateDoc(collabRef, {
+                objects: objects,
+                lastEditedUser: currentUsername,
+                lastEdited: Date.now()
+            });
+        } catch (e) {
+            console.error("Error updating collab: ", e);
         }
     }
 };

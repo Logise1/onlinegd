@@ -181,43 +181,42 @@
     <script src="js/player.js"></script>
     <script src="js/engine.js"></script>
     <script src="js/level.js"></script>
+    <script type="module">
+        import Auth from './js/auth.js';
+        import Cloud from './js/cloud.js';
+        window.Auth = Auth;
+        window.Cloud = Cloud;
+
+        // Wait for preload/styles
+        setTimeout(() => {
+            Auth.init(() => {
+                Editor.init(document.getElementById('editor-canvas'));
+                Editor.resize();
+                Editor.render();
+
+                // Auto-fill stars based on difficulty
+                const diffSelect = document.getElementById('setting-difficulty');
+                const starsInput = document.getElementById('setting-stars');
+                if (diffSelect && starsInput) {
+                    diffSelect.addEventListener('change', (e) => {
+                        const diffMap = {
+                            'auto': 1, 'easy': 2, 'normal': 3, 'hard': 4, 'harder': 6,
+                            'insane': 8, 'demon-easy': 10, 'demon-medium': 10,
+                            'demon-hard': 10, 'demon-insane': 10, 'demon-extreme': 10
+                        };
+                        const choice = e.target.value;
+                        if (diffMap[choice] !== undefined) {
+                            starsInput.value = diffMap[choice];
+                        }
+                    });
+                }
+            });
+        }, 100);
+    </script>
     <script src="js/editor.js"></script>
     <script>
         LevelManager.init();
         preloadAllSprites();
-        const editorCanvas = document.getElementById('editor-canvas');
-
-        // Wait for preload/styles
-        setTimeout(() => {
-            Editor.init(editorCanvas);
-            Editor.resize();
-            Editor.render();
-
-            // Auto-fill stars based on difficulty
-            const diffSelect = document.getElementById('setting-difficulty');
-            const starsInput = document.getElementById('setting-stars');
-            if (diffSelect && starsInput) {
-                diffSelect.addEventListener('change', (e) => {
-                    const diffMap = {
-                        'auto': 1,
-                        'easy': 2,
-                        'normal': 3,
-                        'hard': 4,
-                        'harder': 6,
-                        'insane': 8,
-                        'demon-easy': 10,
-                        'demon-medium': 10,
-                        'demon-hard': 10,
-                        'demon-insane': 10,
-                        'demon-extreme': 10
-                    };
-                    const choice = e.target.value;
-                    if (diffMap[choice] !== undefined) {
-                        starsInput.value = diffMap[choice];
-                    }
-                });
-            }
-        }, 100);
 
         // ESC = save & go back
         window.addEventListener('keydown', (e) => {

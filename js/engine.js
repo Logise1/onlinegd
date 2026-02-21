@@ -754,25 +754,25 @@ const Engine = {
 
         if (p.gravityDir === 1) {
             // Normal gravity
-            if (p.y + pSize >= this.groundY) {
+            if (p.y + pSize >= this.groundY && p.vy >= 0) {
                 p.y = this.groundY - pSize;
                 p.vy = 0;
                 p.onGround = true;
                 p.canJump = true;
             }
-            if (p.y <= this.ceilingY && !p.freeFly && hasCeiling) {
+            if (p.y <= this.ceilingY && !p.freeFly && hasCeiling && p.vy <= 0) {
                 p.y = this.ceilingY;
                 p.vy = 0;
             }
         } else {
             // Reversed gravity
-            if (p.y <= this.ceilingY && !p.freeFly && hasCeiling) {
+            if (p.y <= this.ceilingY && !p.freeFly && hasCeiling && p.vy <= 0) {
                 p.y = this.ceilingY;
                 p.vy = 0;
                 p.onGround = true;
                 p.canJump = true;
             }
-            if (p.y + pSize >= this.groundY) {
+            if (p.y + pSize >= this.groundY && p.vy >= 0) {
                 p.y = this.groundY - pSize;
                 p.vy = 0;
             }
