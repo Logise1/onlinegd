@@ -726,6 +726,22 @@ h2 {
     min-width: 350px;
 }
 
+.settings-panel-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px 30px;
+    align-items: center;
+}
+
+.setting-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-panel .setting-group label {
+    margin-top: 0;
+}
+
 .settings-panel label {
     display: block;
     margin-top: 15px;

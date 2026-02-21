@@ -421,6 +421,14 @@ const Editor = {
             `;
         }
 
+        if (type.isTeleportIn) {
+            html += `
+                <label>Target Group ID (Teleport OUT):</label>
+                <input type="number" step="1" min="0" max="999" value="${obj.targetGroupID || 0}" 
+                       onchange="Editor.updateProp('targetGroupID', parseInt(this.value))">
+            `;
+        }
+
         html += `<hr style="margin:10px 0; border:0; border-top:1px solid #444;">`;
 
         // Group ID (for all objects)
@@ -623,6 +631,8 @@ const Editor = {
             stars: this.levelStars || 0,
             speed: this.levelSpeed,
             song: this.levelSong,
+            customSongId: this.levelCustomSongId,
+            songOffset: this.levelSongOffset,
             bgColor: this.levelBgColor,
             groundColor: this.levelGroundColor,
             objects: JSON.parse(JSON.stringify(this.objects))
@@ -656,6 +666,8 @@ const Editor = {
         this.levelStars = level.stars || 0;
         this.levelSpeed = level.speed || 'normal';
         this.levelSong = level.song || 'StereoMadness.mp3';
+        this.levelCustomSongId = level.customSongId || '';
+        this.levelSongOffset = level.songOffset || 0;
         this.levelBgColor = level.bgColor || '#0033aa';
         this.levelGroundColor = level.groundColor || '#001166';
 
@@ -703,13 +715,12 @@ const Editor = {
             this.render();
         } else {
             const song = this.levelSong || 'StereoMadness.mp3';
-            AudioManager.loadMusic('editor_sync', `music/${song}`);
 
-            // Allow a small delay for loading
-            setTimeout(() => {
-                AudioManager.playMusic('editor_sync');
-                if (AudioManager.music) {
-                    this.isPlayingMusic = true;
+            const loadAndPlayEditorMusic = (actSrc) => {
+                AudioManager.loadMusic('editor_sync', actSrc);
+
+                // Allow a small delay for loading
+                setTimeout(() => {
                     // Calculate starting time based on camera position and level speed
                     const speeds = { slow: 4.5, normal: 6.5, fast: 8.5, vfast: 10.0, vvfast: 12.0 };
                     const blocksPerSec = (speeds[this.levelSpeed || 'normal'] * 60) / BLOCK_SIZE;
@@ -719,20 +730,46 @@ const Editor = {
 
                     // Simple estimation for timestamp
                     const startTime = Math.max(0, (cameraBlocksX - 3) / blocksPerSec);
-                    AudioManager.music.currentTime = startTime;
 
-                    if (btn) btn.innerText = '⏹ Stop Music';
+                    AudioManager.playMusic('editor_sync', startTime + (this.levelSongOffset || 0));
 
-                    // Force continuous rendering to show the sync line
-                    const renderLoop = () => {
-                        if (this.isPlayingMusic) {
-                            this.render();
-                            requestAnimationFrame(renderLoop);
-                        }
-                    };
-                    renderLoop();
+                    if (AudioManager.music) {
+                        this.isPlayingMusic = true;
+
+                        if (btn) btn.innerText = '⏹ Stop Music';
+
+                        // Force continuous rendering to show the sync line
+                        const renderLoop = () => {
+                            if (this.isPlayingMusic) {
+                                this.render();
+                                requestAnimationFrame(renderLoop);
+                            }
+                        };
+                        renderLoop();
+                    }
+                }, 300);
+            };
+
+            if (this.levelCustomSongId) {
+                if (this._cachedSongId === this.levelCustomSongId && this._cachedSongUrl) {
+                    loadAndPlayEditorMusic(this._cachedSongUrl);
+                } else {
+                    if (btn) btn.innerText = '⏳ Loading...';
+                    fetch(`https://ng.logise1123.workers.dev/${this.levelCustomSongId}`)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            this._cachedSongId = this.levelCustomSongId;
+                            this._cachedSongUrl = URL.createObjectURL(blob);
+                            loadAndPlayEditorMusic(this._cachedSongUrl);
+                        })
+                        .catch(() => {
+                            // fallback or offline
+                            if (btn) btn.innerText = '🎵 Play Music';
+                        });
                 }
-            }, 100);
+            } else {
+                loadAndPlayEditorMusic(`music/${song}`);
+            }
         }
     },
 
@@ -919,6 +956,8 @@ const Editor = {
         const starsInput = document.getElementById('setting-stars');
         const speedInput = document.getElementById('setting-speed');
         const songInput = document.getElementById('setting-song');
+        const customIdInput = document.getElementById('setting-custom-song-id');
+        const offsetInput = document.getElementById('setting-song-offset');
         const bgInput = document.getElementById('setting-bg');
         const gndInput = document.getElementById('setting-ground');
 
@@ -927,6 +966,8 @@ const Editor = {
         if (starsInput) starsInput.value = this.levelStars || 0;
         if (speedInput) speedInput.value = this.levelSpeed;
         if (songInput) songInput.value = this.levelSong || 'StereoMadness.mp3';
+        if (customIdInput) customIdInput.value = this.levelCustomSongId || '';
+        if (offsetInput) offsetInput.value = this.levelSongOffset || 0;
         if (bgInput) bgInput.value = this.levelBgColor;
         if (gndInput) gndInput.value = this.levelGroundColor;
 
@@ -942,6 +983,8 @@ const Editor = {
         const starsInput = document.getElementById('setting-stars');
         const speedInput = document.getElementById('setting-speed');
         const songInput = document.getElementById('setting-song');
+        const customIdInput = document.getElementById('setting-custom-song-id');
+        const offsetInput = document.getElementById('setting-song-offset');
         const bgInput = document.getElementById('setting-bg');
         const gndInput = document.getElementById('setting-ground');
 
@@ -950,6 +993,8 @@ const Editor = {
         if (starsInput) this.levelStars = parseInt(starsInput.value) || 0;
         if (speedInput) this.levelSpeed = speedInput.value;
         if (songInput) this.levelSong = songInput.value;
+        if (customIdInput) this.levelCustomSongId = customIdInput.value;
+        if (offsetInput) this.levelSongOffset = parseFloat(offsetInput.value) || 0;
         if (bgInput) this.levelBgColor = bgInput.value;
         if (gndInput) this.levelGroundColor = gndInput.value;
 

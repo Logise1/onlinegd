@@ -32,14 +32,30 @@ const AudioManager = {
         } catch (e) { }
     },
 
-    playMusic(name) {
+    playMusic(name, offset = 0) {
         this.stopMusic();
         if (this.muted || !this.sounds[name]) return;
         try {
             this.music = this.sounds[name].cloneNode();
             this.music.loop = true;
             this.music.volume = this.musicVolume;
-            this.music.play().catch(() => { });
+
+            const attemptPlay = () => {
+                try {
+                    if (this.music && offset > 0) this.music.currentTime = offset;
+                    if (this.music) this.music.play().catch(() => { });
+                } catch (e) { }
+            };
+
+            if (this.music.readyState >= 1) { // HAVE_METADATA or more
+                attemptPlay();
+            } else {
+                this.music.addEventListener('loadedmetadata', attemptPlay, { once: true });
+                // Fallback attempt
+                setTimeout(() => {
+                    if (this.music && this.music.currentTime === 0) attemptPlay();
+                }, 200);
+            }
         } catch (e) { }
     },
 

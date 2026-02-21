@@ -529,8 +529,30 @@
             document.getElementById('details-progress-practice-text').innerText = `${practiceProgress}%`;
             document.getElementById('details-progress-practice-fill').style.width = `${practiceProgress}%`;
 
-            document.getElementById('btn-details-play').onclick = () => {
+            document.getElementById('btn-details-play').onclick = async () => {
                 if (typeof AudioManager !== 'undefined') AudioManager.play('startLevel');
+
+                if (lvl.customSongId) {
+                    const playBtn = document.getElementById('btn-details-play');
+                    const origDisplay = playBtn.style.display;
+                    playBtn.style.display = 'none';
+
+                    const span = document.createElement('span');
+                    span.id = 'download-text';
+                    span.innerText = 'downloading song...';
+                    span.style.color = '#00ff88';
+                    span.style.fontWeight = 'bold';
+                    span.style.fontSize = '24px';
+                    playBtn.parentNode.insertBefore(span, playBtn.nextSibling);
+
+                    try {
+                        await fetch(`https://ng.logise1123.workers.dev/${lvl.customSongId}`);
+                    } catch (e) { }
+
+                    if (document.getElementById('download-text')) document.getElementById('download-text').remove();
+                    playBtn.style.display = origDisplay;
+                }
+
                 const query = lvl.creatorName ? `cloud=${lvl.id}` : `level=${lvl.id}`;
                 window.location.href = `game.html?${query}`;
             };

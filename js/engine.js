@@ -159,34 +159,59 @@ const Engine = {
 
         // Music
         this.loadingMusic = true;
-        const songToPlay = levelData.song || 'StereoMadness.mp3';
-        if (typeof AudioManager !== 'undefined') {
-            AudioManager.loadMusic('level_music', `music/${songToPlay}`);
-            const bgAudio = AudioManager.sounds['level_music'];
-            if (bgAudio) {
-                if (bgAudio.readyState >= 3) {
-                    this.loadingMusic = false;
-                } else {
-                    const onReady = () => {
-                        bgAudio.removeEventListener('canplay', onReady);
+
+        const loadAndSetupAudio = (actSrc) => {
+            if (typeof AudioManager !== 'undefined') {
+                AudioManager.loadMusic('level_music', actSrc);
+                const bgAudio = AudioManager.sounds['level_music'];
+                if (bgAudio) {
+                    if (bgAudio.readyState >= 3) {
                         this.loadingMusic = false;
-                        if (this.state === 'playing') AudioManager.playMusic('level_music');
-                    };
-                    bgAudio.addEventListener('canplay', onReady);
-                    // timeout fallback
-                    setTimeout(() => {
-                        if (this.loadingMusic) {
+                    } else {
+                        const onReady = () => {
                             bgAudio.removeEventListener('canplay', onReady);
                             this.loadingMusic = false;
-                            if (this.state === 'playing') AudioManager.playMusic('level_music');
-                        }
-                    }, 2000);
+                            if (this.state === 'playing') {
+                                AudioManager.playMusic('level_music', levelData.songOffset || 0);
+                            }
+                        };
+                        bgAudio.addEventListener('canplay', onReady);
+                        // timeout fallback
+                        setTimeout(() => {
+                            if (this.loadingMusic) {
+                                bgAudio.removeEventListener('canplay', onReady);
+                                this.loadingMusic = false;
+                                if (this.state === 'playing') {
+                                    AudioManager.playMusic('level_music', levelData.songOffset || 0);
+                                }
+                            }
+                        }, 2000);
+                    }
+                } else {
+                    this.loadingMusic = false;
                 }
             } else {
                 this.loadingMusic = false;
             }
+        };
+
+        if (levelData.customSongId) {
+            if (this._cachedSongId === levelData.customSongId && this._cachedSongUrl) {
+                loadAndSetupAudio(this._cachedSongUrl);
+            } else {
+                fetch(`https://ng.logise1123.workers.dev/${levelData.customSongId}`)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        this._cachedSongId = levelData.customSongId;
+                        this._cachedSongUrl = URL.createObjectURL(blob);
+                        loadAndSetupAudio(this._cachedSongUrl);
+                    })
+                    .catch(() => {
+                        this.loadingMusic = false;
+                    });
+            }
         } else {
-            this.loadingMusic = false;
+            loadAndSetupAudio(`music/${levelData.song || 'StereoMadness.mp3'}`);
         }
     },
 
@@ -207,16 +232,18 @@ const Engine = {
 
                 if (typeof AudioManager !== 'undefined') {
                     // Start music roughly from checkpoint position (naive sync)
-                    const musicFile = this.level.song || 'StereoMadness.mp3';
-                    AudioManager.loadMusic('level_music', `music/${musicFile}`);
+                    let actSrc = `music/${this.level.song || 'StereoMadness.mp3'}`;
+                    if (this.level.customSongId && this._cachedSongId === this.level.customSongId && this._cachedSongUrl) {
+                        actSrc = this._cachedSongUrl;
+                    } else if (this.level.customSongId) {
+                        actSrc = `https://ng.logise1123.workers.dev/${this.level.customSongId}`;
+                    }
+                    AudioManager.loadMusic('level_music', actSrc);
                     setTimeout(() => {
                         if (this.state === 'playing') {
-                            AudioManager.playMusic('level_music');
-                            if (AudioManager.music) {
-                                // Calculate time based on X offset and avg speed. (Rough approx for practice mode)
-                                const avgSpeed = this.speeds[this.currentSpeed] * 60; // blocks per second approx
-                                AudioManager.music.currentTime = Math.max((cp.x / avgSpeed), 0);
-                            }
+                            const avgSpeed = this.speeds[this.currentSpeed] * 60; // blocks per second approx
+                            const practiceOffset = Math.max((cp.x / avgSpeed) + (this.level.songOffset || 0), 0);
+                            AudioManager.playMusic('level_music', practiceOffset);
                         }
                     }, 100);
                 }
@@ -229,7 +256,7 @@ const Engine = {
     /* ── Main Loop ── */
     start() {
         if (!this.loadingMusic && typeof AudioManager !== 'undefined') {
-            AudioManager.playMusic('level_music');
+            AudioManager.playMusic('level_music', this.level.songOffset || 0);
         } else if (this.loadingMusic && this.state === 'playing') {
             // it will play once the event listener resolves in `loadLevel`
         }
@@ -537,6 +564,55 @@ const Engine = {
                 if (type.portalGravity) Engine.flipGravity();
                 if (type.portalSpeed) Engine.changeSpeed(type.portalSpeed);
                 if (type.portalSize) Engine.changeSize(type.portalSize);
+
+                if (type.isTeleportIn) {
+                    const targetOut = this.level.objects.find(o =>
+                        getObjectType(o.type)?.isTeleportOut && (o.groupID || 0) === (obj.targetGroupID || 0)
+                    );
+                    if (targetOut) {
+                        const outType = getObjectType(targetOut.type);
+                        let outY = (targetOut.y !== undefined
+                            ? this.groundY - (this.GROUND_ROW - targetOut.y) * BLOCK_SIZE
+                            : this.groundY - BLOCK_SIZE);
+
+                        // Apply Group Modifications
+                        if (targetOut.groupID && this.groupModifications[targetOut.groupID]) {
+                            outY += this.groupModifications[targetOut.groupID].y || 0;
+                        }
+
+                        const scale = targetOut.scale || 1;
+                        const oh = (outType.h || 1) * BLOCK_SIZE * scale;
+                        outY += BLOCK_SIZE - oh;
+
+                        // Move player keeping relative offset inside portal
+                        const relativeY = py - oy;
+                        p.y = outY + relativeY;
+
+                        // Snap camera to prevent smooth sliding over a long distance
+                        const targetCamYCube = this.groundY - this.logicalHeight * 0.8;
+                        let targetCamY = p.y - this.logicalHeight * 0.5;
+
+                        if (p.mode === 'ship' || p.mode === 'ufo' || p.mode === 'wave') {
+                            if (!p.freeFly) {
+                                this.lastPortalY = outY;
+                                targetCamY = outY - this.logicalHeight * 0.5;
+                            } else {
+                                const groundLimit = this.groundY - this.logicalHeight * 0.8;
+                                if (targetCamY > groundLimit) targetCamY = groundLimit;
+                            }
+                        } else {
+                            targetCamY = p.y - this.logicalHeight * 0.6;
+                            const groundInfluence = 0.5;
+                            targetCamY = (targetCamY * (1 - groundInfluence)) + (targetCamYCube * groundInfluence);
+                            const groundLimit = this.groundY - this.logicalHeight * 0.8;
+                            if (targetCamY > groundLimit) targetCamY = groundLimit;
+                        }
+
+                        this.camera.y = targetCamY;
+
+                        targetOut._triggered = true;
+                    }
+                }
 
                 AudioManager.play('portal');
                 continue;

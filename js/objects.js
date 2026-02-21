@@ -22,6 +22,8 @@ const ObjectTypes = {
     PORTAL_WAVE: { id: 'portal_wave', category: 'portal', sprite: 'sprites/portals/portal_wave.png', solid: false, lethal: false, w: 1, h: 3, portalMode: 'wave' },
     PORTAL_ROBOT: { id: 'portal_robot', category: 'portal', sprite: 'sprites/portals/portal_robot.png', solid: false, lethal: false, w: 1, h: 3, portalMode: 'robot' },
     PORTAL_SPIDER: { id: 'portal_spider', category: 'portal', sprite: 'sprites/portals/portal_spider.png', solid: false, lethal: false, w: 1, h: 3, portalMode: 'spider' },
+    PORTAL_TELEPORT_IN: { id: 'portal_teleport_in', category: 'portal', sprite: 'sprites/portals/teleportIN.png', solid: false, lethal: false, w: 1, h: 3, isTeleportIn: true },
+    PORTAL_TELEPORT_OUT: { id: 'portal_teleport_out', category: 'portal', sprite: 'sprites/portals/teleportOUT.png', solid: false, lethal: false, w: 1, h: 3, isTeleportOut: true },
 
     // ── Portals (gravity) ──
     PORTAL_GRAVITY_FLIP: { id: 'portal_gravity_flip', category: 'portal', sprite: 'sprites/portals/portal_gravity.png', solid: false, lethal: false, w: 1, h: 3, portalGravity: 'flip' },
