@@ -1139,7 +1139,16 @@ const Engine = {
                     drawW = drawH * ratio;
                     drawX = ox + (ow - drawW) / 2;
                 }
-                ctx.drawImage(sprite, drawX, drawY, drawW, drawH);
+
+                if (type.category === 'solid') {
+                    ctx.save();
+                    ctx.shadowColor = this.level?.groundColor || '#00ff88';
+                    ctx.shadowBlur = 10;
+                    ctx.drawImage(sprite, drawX, drawY, drawW, drawH);
+                    ctx.restore();
+                } else {
+                    ctx.drawImage(sprite, drawX, drawY, drawW, drawH);
+                }
             } else {
                 // Fallback colored rect
                 ctx.fillStyle = this.getFallbackColor(type);

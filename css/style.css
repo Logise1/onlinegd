@@ -38,12 +38,32 @@ body {
     content: '';
     position: absolute;
     inset: -50px;
-    background: url('../sprites/ui/game_bg_01_001-hd.png') center/cover no-repeat;
-    background-attachment: fixed;
-    filter: grayscale(1) brightness(0.4);
+    background: url('../sprites/ui/game_bg_01_001-hd.png') repeat;
+    background-size: auto 100%;
     z-index: -1;
     transition: transform 0.1s ease-out;
     transform: translate(var(--px, 0px), var(--py, 0px));
+    animation: scrollBg 40s linear infinite, colorCycle 15s linear infinite;
+}
+
+@keyframes scrollBg {
+    from {
+        background-position: 0% 0;
+    }
+
+    to {
+        background-position: -2000px 0;
+    }
+}
+
+@keyframes colorCycle {
+    0% {
+        filter: hue-rotate(0deg) brightness(0.6);
+    }
+
+    100% {
+        filter: hue-rotate(360deg) brightness(0.6);
+    }
 }
 
 /* No changes needed to ::after, but let's ensure it's still there */

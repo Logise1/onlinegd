@@ -942,7 +942,15 @@ const Editor = {
             }
 
             if (sprite) {
-                ctx.drawImage(sprite, ox, oy, ow, oh);
+                if (type.category === 'solid') {
+                    ctx.save();
+                    ctx.shadowColor = this.levelGroundColor || '#00ff88';
+                    ctx.shadowBlur = 10 / this.zoom;
+                    ctx.drawImage(sprite, ox, oy, ow, oh);
+                    ctx.restore();
+                } else {
+                    ctx.drawImage(sprite, ox, oy, ow, oh);
+                }
             } else {
                 const colors = {
                     solid: '#555577', hazard: '#cc3333', portal: '#8833ff',

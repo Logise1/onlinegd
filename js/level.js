@@ -14,6 +14,7 @@ const LevelManager = {
         try {
             const data = localStorage.getItem('gd_custom_levels');
             if (data) this.customLevels = JSON.parse(data);
+            if (!Array.isArray(this.customLevels)) this.customLevels = [];
         } catch (e) { this.customLevels = []; }
     },
 
