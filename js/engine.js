@@ -337,6 +337,9 @@ const Engine = {
             // If not free fly, lock camera to a fixed offset relative to ground
             if (!p.freeFly) {
                 targetCamY = (this.lastPortalY !== undefined) ? (this.lastPortalY - this.logicalHeight * 0.5) : targetCamYCube;
+                // Clamping here so ground is not cut off
+                const groundLimit = this.groundY - this.logicalHeight * 0.8;
+                if (targetCamY > groundLimit) targetCamY = groundLimit;
             } else {
                 // Clamp targetCamY so the camera doesn't show far below the ground
                 const groundLimit = this.groundY - this.logicalHeight * 0.8;
@@ -636,6 +639,8 @@ const Engine = {
                             if (!p.freeFly) {
                                 this.lastPortalY = outY;
                                 targetCamY = outY - this.logicalHeight * 0.5;
+                                const groundLimit = this.groundY - this.logicalHeight * 0.8;
+                                if (targetCamY > groundLimit) targetCamY = groundLimit;
                             } else {
                                 const groundLimit = this.groundY - this.logicalHeight * 0.8;
                                 if (targetCamY > groundLimit) targetCamY = groundLimit;

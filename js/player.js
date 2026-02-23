@@ -294,6 +294,12 @@ const Player = {
             let sw = pSize * ratio;
             let sh = pSize;
 
+            // Scale down ship sprite as it appears too large
+            if (p.mode === 'ship') {
+                sw *= 0.75;
+                sh *= 0.75;
+            }
+
             // For ship and wave, sometimes they might need slight scale adjust if they feel too small height-wise, 
             // but preserving ratio ensures no squashing.
             ctx.drawImage(sprite, -sw / 2, -sh / 2, sw, sh);
