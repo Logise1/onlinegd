@@ -548,6 +548,29 @@
                 starsText.style.display = 'none';
             }
 
+            // Verification status
+            const verifyStatus = document.getElementById('details-verify-status');
+            if (isLocal) {
+                if (!verifyStatus) {
+                    const statusEl = document.createElement('div');
+                    statusEl.id = 'details-verify-status';
+                    statusEl.style.fontSize = '12px';
+                    statusEl.style.marginTop = '5px';
+                    document.querySelector('.level-details-info').appendChild(statusEl);
+                }
+                const v = document.getElementById('details-verify-status');
+                v.style.display = 'block';
+                if (lvl.verified) {
+                    v.innerText = '✓ VERIFIED';
+                    v.style.color = '#00ff88';
+                } else {
+                    v.innerText = '⚠ NOT VERIFIED (Pass it to publish)';
+                    v.style.color = '#ffcc00';
+                }
+            } else if (verifyStatus) {
+                verifyStatus.style.display = 'none';
+            }
+
             // Local actions
             const leftActions = document.getElementById('local-actions-left');
             const rightActions = document.getElementById('local-actions-right');
@@ -569,6 +592,8 @@
                 };
                 uploadBtn.onclick = async () => {
                     if (!Auth.user) return alert('Please Login to share levels!');
+                    if (!lvl.verified) return alert('You must verify (pass) the level in normal mode before publishing!');
+
                     const originalText = uploadBtn.innerText;
                     uploadBtn.innerText = 'WAIT...';
                     uploadBtn.disabled = true;

@@ -556,6 +556,7 @@ const Editor = {
             if (label) label.innerText = val;
         }
 
+        this.unverify();
         this.saveLevel();
         this.render();
     },
@@ -654,6 +655,7 @@ const Editor = {
 
         this.objects.push({ type: this.selectedType, x: gx, y: gy });
 
+        this.unverify();
         this.render();
         this.saveLevel();
     },
@@ -665,6 +667,7 @@ const Editor = {
         if (this.objects.length === before) {
             this.undoStack.pop(); // nothing changed
         } else {
+            this.unverify();
             this.render();
             this.saveLevel();
         }
@@ -695,8 +698,16 @@ const Editor = {
             songOffset: this.levelSongOffset,
             bgColor: this.levelBgColor,
             groundColor: this.levelGroundColor,
-            objects: JSON.parse(JSON.stringify(this.objects))
+            objects: JSON.parse(JSON.stringify(this.objects)),
+            verified: this.levelVerified || false
         };
+    },
+
+    unverify() {
+        if (this.levelVerified) {
+            this.levelVerified = false;
+            this.saveLevel();
+        }
     },
 
     autoSave() {
@@ -759,6 +770,7 @@ const Editor = {
         this.levelSongOffset = level.songOffset || 0;
         this.levelBgColor = level.bgColor || '#0033aa';
         this.levelGroundColor = level.groundColor || '#001166';
+        this.levelVerified = level.verified || false;
 
         // Update settings inputs
         const nameInput = document.getElementById('setting-name');
