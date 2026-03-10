@@ -665,12 +665,11 @@ const Engine = {
 
             // ── Pads (automatic)
             if (type.padForce !== undefined && !obj._triggered) {
-                // Directional check: must be hitting from Top (gravityDir=1) or Bottom (gravityDir=-1)
-                // We use a small vertical threshold and check velocity to ensure "landing"
-                const isHeadingTowards = (p.gravityDir === 1 && p.vy >= 0) || (p.gravityDir === -1 && p.vy <= 0);
-                const isCorrectSide = (p.gravityDir === 1) ? (py + pSize <= hy + hh * 0.5) : (py >= hy + hh * 0.5);
+                // If we are overlapping, just check if we are moving towards the pad or landing on it
+                // We allow a small negative vy for forgiveness (e.g. hitting just after a tiny bounce)
+                const isHeadingTowards = (p.gravityDir === 1 && p.vy >= -2) || (p.gravityDir === -1 && p.vy <= 2);
 
-                if (isHeadingTowards && isCorrectSide) {
+                if (isHeadingTowards) {
                     obj._triggered = true;
                     p.vy = type.padForce * p.gravityDir;
                     p.onGround = false;
@@ -678,7 +677,7 @@ const Engine = {
 
                     // Feedback
                     if (typeof AudioManager !== 'undefined') AudioManager.play('pad');
-                    this.spawnParticles(px + pSize / 2, py + pSize / 2, type.orbGlow || '#fff', 5);
+                    this.spawnParticles(px + pSize / 2, py + pSize / 2, type.orbGlow || '#fff', 8);
                     continue;
                 }
             }

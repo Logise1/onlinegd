@@ -81,3 +81,4 @@ AudioManager.load('quit', 'sounds/quitSound_01.ogg');
 AudioManager.load('menu', 'sounds/menuLoop.mp3');
 AudioManager.load('portal', 'sounds/portal_01.ogg');
 AudioManager.load('orb', 'sounds/orb_01.ogg');
+AudioManager.load('pad', 'sounds/orb_01.ogg'); // Using orb sound as placeholder for pad
